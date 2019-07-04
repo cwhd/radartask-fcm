@@ -18,6 +18,13 @@ mesa runserver
 
 ```
 
+## Thoughts and TODOs
+
+- I wonder if mesa is really the best choice, or maybe use Unity or Gym?
+  - [ML-Agents](https://github.com/salepaun/ML-agents)
+  - https://paperswithcode.com/paper/unity-a-general-platform-for-intelligent#code
+- [Gym](https://gym.openai.com/envs/#toy_text)
+
 ## References
 
 Carley, Kathleen M., Michael J. Prietula, and Zhiang Lin. "Design versus cognition: The interaction of agent cognition and organizational design on organizational performance." Journal of Artificial Societies and Social Simulation 1.3 (1998): 1-19.
