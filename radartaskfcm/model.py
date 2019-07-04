@@ -1,11 +1,11 @@
-#from cooperation.agents import Cow, GrassPatch, FCMCow
-#from cooperation.schedule import RandomActivationByBreed
+from radartaskfcm.agents import Worker
 
 from mesa import Model
 from mesa.space import MultiGrid
 from mesa.datacollection import DataCollector
 from mesa.time import RandomActivation
 import numpy as np
+from mesa.time import SimultaneousActivation
 
 class RadarTask(Model):
     # grid height
@@ -22,6 +22,7 @@ class RadarTask(Model):
         self.width = width
         #have to initialize the grid
         self.grid = MultiGrid(self.width, self.height, torus=True)
+        self.schedule = SimultaneousActivation(self)
 
         super().__init__()
 
