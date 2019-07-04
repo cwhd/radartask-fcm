@@ -20,10 +20,28 @@ mesa runserver
 
 ## Thoughts and TODOs
 
+- A bunch of stuff in the agent
+  - worker can act as a team or subordinate or manager
+  - need a method to make a decision based on 3 inputs
+  - manager gets inputs from agents to make a decision
+  - add an FCM in here...
+  - add a learning method for updating weights
+- Model
+  - add any other inputs that we need
+  - Maybe each tick is a decision?
+  - Method to generate random radar blip
+  - Collect all the data
+    - What was the decision?
+    - Was it right or wrong?
+- Server
+  - param to make this team or hierarchy
+  - Option for blocked or the other option
+  - Save data to CSV or something
 - I wonder if mesa is really the best choice, or maybe use Unity or Gym?
   - [ML-Agents](https://github.com/salepaun/ML-agents)
   - https://paperswithcode.com/paper/unity-a-general-platform-for-intelligent#code
-- [Gym](https://gym.openai.com/envs/#toy_text)
+  - [Gym](https://gym.openai.com/envs/#toy_text)
+- Maybe I should go pure Python with [PyOpenFCM](https://github.com/cwhd/PyOpenFCM)
 
 ## References
 
