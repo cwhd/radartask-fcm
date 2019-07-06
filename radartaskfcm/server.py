@@ -23,14 +23,14 @@ def radar_portrayal(agent):
 # dictionary of user settable parameters - these map to the model __init__ parameters
 model_params = {
     "use_team": UserSettableParameter('checkbox', 'Use Team', True)
-
                 }
 
 # set the portrayal function and size of the canvas for visualization
 canvas_element = CanvasGrid(radar_portrayal, 20, 20, 500, 500)
 
 # map data to chart in the ChartModule
-chart_element = ChartModule([{"Label": "Cooperative", "Color": COOPERATIVE_COLOR}])
+chart_element = ChartModule([{"Label": "Wrong", "Color": COOPERATIVE_COLOR},
+                                {"Label": "Correct", "Color": "#11FF44"}])
 
 # create instance of Mesa ModularServer
 server = ModularServer(RadarTask, [canvas_element, chart_element],

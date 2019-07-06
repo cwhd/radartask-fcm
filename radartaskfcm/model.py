@@ -7,6 +7,8 @@ from mesa.time import RandomActivation
 import numpy as np
 from mesa.time import SimultaneousActivation, RandomActivation
 
+import matplotlib.pyplot as plt
+
 class RadarTask(Model):
     # grid height
     grid_h = 20
@@ -32,9 +34,8 @@ class RadarTask(Model):
         self.schedule.add(team) 
 
         self.datacollector = DataCollector(model_reporters={
-                                            "Hostile": lambda m: self.count_bad_votes(m),
-                                            "Friendly": lambda m: self.count_good_votes(m),
-                                            "Neutral": lambda m: self.count_neutral_votes(m),
+                                            "Wrong": lambda m: self.count_bad_votes(m),
+                                            "Correct": lambda m: self.count_good_votes(m)
                                             }
                                         )
 
@@ -43,6 +44,7 @@ class RadarTask(Model):
         self.schedule.step()
         # collect data
         self.datacollector.collect(self)
+        #plt.hist(self.count_good_votes(self))
 
     def run_model(self):
         for i in range(self.run_time):
@@ -50,15 +52,20 @@ class RadarTask(Model):
 
     @staticmethod
     def count_good_votes(model):
-        #TODO when agents vote, manage it
-        return True
+        total_count = 0
+        for agent in model.schedule.agents:
+            total_count += agent.correct_count
+
+        print("total count:")
+        print(total_count)
+        return total_count
 
     @staticmethod
     def count_bad_votes(model):
-        #TODO when agents vote, manage it
-        return True
+        total_count = 0
+        for agent in model.schedule.agents:
+            total_count += agent.wrong_count
 
-    @staticmethod
-    def count_neutral_votes(model):
-        #TODO when agents vote, manage it
-        return True
+        print("another total count:")
+        print(total_count)
+        return total_count
