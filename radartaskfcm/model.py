@@ -45,6 +45,7 @@ class RadarTask(Model):
         # collect data
         self.datacollector.collect(self)
         #plt.hist(self.count_good_votes(self))
+        #plt.show()
 
     def run_model(self):
         for i in range(self.run_time):
@@ -56,8 +57,7 @@ class RadarTask(Model):
         for agent in model.schedule.agents:
             total_count += agent.correct_count
 
-        print("total count:")
-        print(total_count)
+        print("Good votes: " + str(total_count))
         return total_count
 
     @staticmethod
@@ -66,6 +66,5 @@ class RadarTask(Model):
         for agent in model.schedule.agents:
             total_count += agent.wrong_count
 
-        print("another total count:")
-        print(total_count)
+        print("bad votes: " + str(total_count))
         return total_count

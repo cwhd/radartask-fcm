@@ -1,5 +1,7 @@
 from mesa import Agent
 import random
+from radartaskfcm.fcmwrapper import FCMUtils
+from radartaskfcm.neowrapper import NeoUtils
 
 # TODO worker can act as a team or subordinate or manager
 # TODO need a method to make a decision based on 3 inputs
@@ -9,12 +11,17 @@ import random
 
 class Worker():
 
-    def __init__(self):
+    def __init__(self, model_id):
+        self.model_id = model_id
         self.breed = 'worker'
+        # the FCMs should be radar1, radar2 and radar3
         self.fcm = '' # TODO this is the actual mental model
+        self.neoService = NeoUtils()
+        self.fcmService = FCMUtils()
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
+        print("CALL FCM HERE...")
         if sum(radar_info) <= 5:
             return "Good"
         elif sum(radar_info) >= 7:
@@ -22,27 +29,17 @@ class Worker():
         else:
             return "Neutral"
 
-    #given their correctness from the previous aircraft, update their neural model
-    def learn(self,last_result):
-        self.fcm = '' # this needs to get updated sometimes...
-        if(last_result): 
-            return True
-        else: #TODO go back and update the weights for the FCM
-            return False
+    def learn(self, is_correct):
+        print('updating mental model with new weights for worker ' + str(self.model_id))
+        if(not is_correct):
+            #TODO call neo service here, update model for this worker
+            #self.neoService.callNeo()
+            new_weights = self.fcmService.getNewWeights()
+            print('wrong, changing mental model!')
+            print(new_weights)
 
-
-class Manager(Agent):
-
-    def __init__(self, unique_id, pos, model):
-        '''
-        grid: The MultiGrid object in which the agent lives.
-        x: The agent's current x coordinate
-        y: The agent's current y coordinate
-       '''
-        super().__init__(unique_id, model)
-        self.breed = 'manager'
-        self.pos = pos
-
+        self.fcm = ''
+        return "learning"
 
 class Team(Agent):
     def __init__(self, unique_id, pos, model):
@@ -59,7 +56,7 @@ class Team(Agent):
         self.correct_count = 0
         self.wrong_count = 0
         for i in range(3):
-            team_member = Worker()
+            team_member = Worker("radar" + str(i))
             self.team_members.append(team_member)
 
     def get_radar_info(self):
@@ -92,17 +89,8 @@ class Team(Agent):
         decisions = []
         for i in range(self.team_count):
             worker = self.team_members[i]
-            #print('from:')
-            #print(i*3)
-            #print('to:')
-            #print(i*3+3)
-            #print('current info:')
-            #print(radar_info[i*3:i*3+3])
             decisions.append(worker.decide(radar_info[i*3:i*3+3])) #get worker decision
         
-        #print('decisions:')
-        #print(decisions)
-
         final_vote = ''
         if decisions.count('Good') > 1:
             final_vote = 'Friendly'
@@ -111,12 +99,13 @@ class Team(Agent):
         else:
             final_vote = "Neutral"
 
+        is_correct = True
         if(self.check_aircraft_type(radar_info) == final_vote):
             self.correct_count += 1
         else:
             self.wrong_count += 1
+            is_correct = False
 
-        #print("Correct:")
-        #print(self.correct_count)
-        #print('Wrong')
-        #print(self.wrong_count)
+        for i in range(self.team_count):
+            worker = self.team_members[i]
+            worker.learn(is_correct)
