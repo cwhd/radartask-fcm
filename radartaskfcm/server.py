@@ -30,7 +30,9 @@ canvas_element = CanvasGrid(radar_portrayal, 20, 20, 500, 500)
 
 # map data to chart in the ChartModule
 chart_element = ChartModule([{"Label": "Wrong", "Color": COOPERATIVE_COLOR},
-                                {"Label": "Correct", "Color": "#11FF44"}])
+                                {"Label": "Correct", "Color": "#11FF44"}],
+                                data_collector_name='datacollector'
+                                )
 
 # create instance of Mesa ModularServer
 server = ModularServer(RadarTask, [canvas_element, chart_element],

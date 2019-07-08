@@ -15,6 +15,8 @@ class Worker():
         self.fcm = '' # TODO this is the actual mental model
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
+        self.learning_threshold = .7
+        self.weight_memory = [[]]
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
@@ -52,6 +54,12 @@ class Worker():
 
         self.fcm = ''
         return "learning"
+
+    def manage_memory(self):
+        #call this to remember something good
+        #if something is correct within the learning threshold, keep it - otherwise toss it
+        #combine 2 correct sets of weights to make a better one
+        return True
 
 class Team(Agent):
     def __init__(self, unique_id, pos, model):

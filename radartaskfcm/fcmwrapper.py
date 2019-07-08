@@ -50,18 +50,18 @@ class FCMUtils():
             "(`2` :Prop2 {modelId:'" + model_id + "',goal:'property2',description:'property2'}) , "
             "(`3` :Prop3 {modelId:'" + model_id + "',goal:'property3',description:'property3'}) , "
             "(`4` :`Decide Bad` {modelId:'" + model_id + "',goal:'bad',description:'bad'}) , "
-            "(`1`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`0`), "
-            "(`2`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`0`), "
-            "(`3`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`0`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`0`), " #prop1->good
+            "(`2`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`0`), " #prop2->good
+            "(`3`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`0`), " #prop3->good
             "(`3`)-[:`affects` {value:'" + str(new_weights[3]) + "'}]->(`2`), "
             "(`3`)-[:`affects` {value:'" + str(new_weights[4]) + "'}]->(`1`), "
             "(`2`)-[:`affects` {value:'" + str(new_weights[5]) + "'}]->(`1`), "
             "(`2`)-[:`affects` {value:'" + str(new_weights[6]) + "'}]->(`3`), "
             "(`1`)-[:`affects` {value:'" + str(new_weights[7]) + "'}]->(`2`), "
             "(`1`)-[:`affects` {value:'" + str(new_weights[8]) + "'}]->(`3`), "
-            "(`3`)-[:`affects` {value:'" + str(new_weights[9]) + "'}]->(`4`), "
-            "(`2`)-[:`affects` {value:'" + str(new_weights[10]) + "'}]->(`4`), "
-            "(`1`)-[:`affects` {value:'" + str(new_weights[11]) + "'}]->(`4`)")
+            "(`3`)-[:`affects` {value:'" + str(new_weights[9]) + "'}]->(`4`), " #prop3->bad
+            "(`2`)-[:`affects` {value:'" + str(new_weights[10]) + "'}]->(`4`), " #prop2->bad
+            "(`1`)-[:`affects` {value:'" + str(new_weights[11]) + "'}]->(`4`)") #prop1->bad
             
         return cypher_create
 
@@ -96,45 +96,4 @@ TODO learning algorithm
   - save the guessed answer and the actual answer for later
   - if it's wrong, readjust weights, save back to NEO
   - save number of iterations and value history
-
-
-TODO translate this to Python
-
-   var saveCypherToNeo = function(evt) {
-        console.log("SAVING TO NEO...");
-        var cypherExport = document.getElementById("taCypherExport").value;
-        cypherExport = cypherExport.replace(/\r?\n|\r/g, " ")
-        console.log("CYPHER EXPORT:");
-        console.log(cypherExport);
-        
-        var requestModelId = document.getElementById("currentModelId").value;
-        var deleteCypher = "MATCH (n {modelId:'" + requestModelId + "'}) where not exists (n.internalType) DETACH DELETE n ";
-
-        //first delete
-        fetch('http://localhost:8080/model', {
-            method: 'POST',
-            body: deleteCypher 
-            }).then(response => response.json())
-            .then(function (body) {
-                console.log("DELETED CYPHER");
-                console.log(body); 
-                //then insert
-                fetch('http://localhost:8080/model', {
-                    method: 'POST',
-                    body: cypherExport 
-                    }).then(response => response.json())
-                    .then(function (body) {
-                    console.log(body); 
-                }).catch(function (error) {
-                    console.log("ERROR:" + error);
-                });
-
-        }).catch(function (error) {
-            console.log("ERROR:" + error);
-        });
-
-        cancelModal();
-    };
-    d3.select( "#save_to_neo" ).on( "click", saveCypherToNeo );
-
 """
