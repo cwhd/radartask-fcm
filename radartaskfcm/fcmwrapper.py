@@ -42,18 +42,42 @@ class FCMUtils():
 
         return fcm_dict
 
-    def replaceFCM(self, model_id, fcm_dict):
-        #TODO need to figure out adding Cypher here...
-        add_cypher = ""
+    def generateCreateCypher(self, new_weights):
+
+        cypher_create =  ("CREATE "
+            "(`0` :`Decide Good` {modelId:'radar3',goal:'good',description:'good'}) , "
+            "(`1` :Prop1 {modelId:'radar3',goal:'property1',description:'property1'}) , "
+            "(`2` :Prop2 {modelId:'radar3',goal:'property2',description:'property2'}) , "
+            "(`3` :Prop3 {modelId:'radar3',goal:'property3',description:'property3'}) , "
+            "(`4` :`Decide Bad` {modelId:'radar3',goal:'bad',description:'bad'}) , "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`0`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`0`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`0`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[3]) + "'}]->(`2`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[4]) + "'}]->(`1`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[5]) + "'}]->(`1`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[6]) + "'}]->(`3`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[7]) + "'}]->(`2`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[8]) + "'}]->(`3`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[9]) + "'}]->(`4`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[10]) + "'}]->(`4`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[11]) + "'}]->(`4`)")
+            
+        return cypher_create
+
+    def replaceFCM(self, model_id, new_weights):
+        add_cypher = self.generateCreateCypher(new_weights)
         delete_cypher = "MATCH (n {modelId:'" + model_id + "'}) where not exists (n.internalType) DETACH DELETE n "
 
-        headers = {'content-type': 'application/json'}
-        fcm_request = requests.post('http://localhost:8080/model', data=delete_cypher, headers=headers)
-        results = fcm_request.json()
+        #headers = {'content-type': 'application/json'}
+        #fcm_request = requests.post('http://localhost:8080/model', data=delete_cypher, headers=headers)
+        #results = fcm_request.json()
         #make sure this is 200 then...
-        headers = {'content-type': 'application/json'}
-        fcm_request = requests.post('http://localhost:8080/model', data=add_cypher, headers=headers)
-        results = fcm_request.json()
+        #headers = {'content-type': 'application/json'}
+        #fcm_request = requests.post('http://localhost:8080/model', data=add_cypher, headers=headers)
+        #results = fcm_request.json()
+        print("add cypher: " + add_cypher)
+        print("delete cypher: " + delete_cypher)
         
     def getNewWeights(self):
 

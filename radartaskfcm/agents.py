@@ -18,17 +18,15 @@ class Worker():
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
-        print("FCM HERE..." + str(radar_info))
         #the values are 1-3, so subtracting 2 gives us -1, 0, or 1
         radar_info[:] = [x - 2 for x in radar_info]
 
-        fcmService = FCMUtils()
         fcm_input1 = { 'name':'property1', 'act':'TANH', 'output':radar_info[0], 'fixedOutput': False }
         fcm_input2 = { 'name':'property2', 'act':'TANH', 'output':radar_info[1], 'fixedOutput': False }
         fcm_input3 = { 'name':'property3', 'act':'TANH', 'output':radar_info[2], 'fixedOutput': False }
         body_input = [fcm_input1, fcm_input2, fcm_input3]
         concepts = { 'concepts':body_input }
-        fcm_result = fcmService.getFCM(self.model_id, concepts)
+        fcm_result = self.fcmService.getFCM(self.model_id, concepts)
 
         print(fcm_result)
         good_guess = fcm_result['good']
@@ -47,6 +45,8 @@ class Worker():
             #TODO call neo service here, update model for this worker
             #self.neoService.callNeo()
             new_weights = self.fcmService.getNewWeights()
+            fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
+
             print('wrong, changing mental model!')
             print(new_weights)
 

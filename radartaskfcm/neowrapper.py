@@ -18,7 +18,6 @@ class NeoUtils():
             post_body += data_contents
         post_body += "} ] }"
         
-
         headers = {'content-type': 'application/json', 'Authorization':'bmVvNGo6YWRtaW4='}
         neo_request = requests.post('http://neo4j:7474/db/data/transaction/commit', data=post_body, headers=headers)
         results = neo_request.json()
