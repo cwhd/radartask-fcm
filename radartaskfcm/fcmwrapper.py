@@ -4,21 +4,15 @@ import random
 from radartaskfcm.neowrapper import NeoUtils
 
 ''' Use like this...
-from cooperation.fcmwrapper import FCMAgent
+from radartaskfcm.fcmwrapper import FCMUtils
 
-    def run_fcm(self, is_greedy, concepts):
-        fcmService = FCMAgent()
-        fcm_result = fcmService.getFCM('greedyCow1', concepts)
-        return fcm_result  
-
-    ...then later...
-
+    fcmService = FCMUtils()
     fcm_input1 = { 'name':'Food Observation', 'act':'INTERVAL', 'output':1, 'fixedOutput': True }
     fcm_input2 = { 'name':'Eat', 'act':'INTERVAL', 'output':1, 'fixedOutput': True }
     fcm_input3 = { 'name':'Energy', 'act':'INTERVAL', 'output':1, 'fixedOutput': True }
     body_input = [fcm_input1, fcm_input2]
     concepts = { 'concepts':body_input }
-    fcm_result = self.run_fcm(is_greedy, concepts)
+    fcm_result = fcmService.getFCM('greedyCow1', concepts)
 
 '''
 class FCMUtils():

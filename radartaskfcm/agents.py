@@ -4,9 +4,7 @@ from radartaskfcm.fcmwrapper import FCMUtils
 from radartaskfcm.neowrapper import NeoUtils
 
 # TODO worker can act as a team or subordinate or manager
-# TODO need a method to make a decision based on 3 inputs
 # TODO manager gets inputs from agents to make a decision
-# TODO add an FCM in here...
 # TODO add a learning method for updating weights
 
 class Worker():
@@ -14,17 +12,31 @@ class Worker():
     def __init__(self, model_id):
         self.model_id = model_id
         self.breed = 'worker'
-        # the FCMs should be radar1, radar2 and radar3
         self.fcm = '' # TODO this is the actual mental model
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
-        print("CALL FCM HERE...")
-        if sum(radar_info) <= 5:
+        print("FCM HERE..." + str(radar_info))
+        #the values are 1-3, so subtracting 2 gives us -1, 0, or 1
+        radar_info[:] = [x - 2 for x in radar_info]
+
+        fcmService = FCMUtils()
+        fcm_input1 = { 'name':'property1', 'act':'TANH', 'output':radar_info[0], 'fixedOutput': False }
+        fcm_input2 = { 'name':'property2', 'act':'TANH', 'output':radar_info[1], 'fixedOutput': False }
+        fcm_input3 = { 'name':'property3', 'act':'TANH', 'output':radar_info[2], 'fixedOutput': False }
+        body_input = [fcm_input1, fcm_input2, fcm_input3]
+        concepts = { 'concepts':body_input }
+        fcm_result = fcmService.getFCM(self.model_id, concepts)
+
+        print(fcm_result)
+        good_guess = fcm_result['good']
+        bad_guess = fcm_result['bad']
+
+        if(good_guess > 0):
             return "Good"
-        elif sum(radar_info) >= 7:
+        elif(bad_guess > 0):
             return "Bad"
         else:
             return "Neutral"
@@ -82,15 +94,15 @@ class Team(Agent):
         return aircraft_type
 
     def step(self):
-        print("step...")
         radar_info = self.get_radar_info()
-        print("radar info:")
-        print(radar_info)
+        print("radar info:" + str(radar_info))
         decisions = []
         for i in range(self.team_count):
             worker = self.team_members[i]
+            print("worker:" + str(i) + " " + str(worker))
             decisions.append(worker.decide(radar_info[i*3:i*3+3])) #get worker decision
         
+        print("decisions: " + str(decisions))
         final_vote = ''
         if decisions.count('Good') > 1:
             final_vote = 'Friendly'
