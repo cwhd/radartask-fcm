@@ -7,6 +7,7 @@ from mesa.datacollection import DataCollector
 from mesa.time import RandomActivation
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # parameter lists for each parameter to be tested in batch run
 br_params = {"use_team": [False, False, False] }
@@ -26,3 +27,7 @@ if __name__ == '__main__':
             i_run_data = br_df["Data Collector"][i].get_model_vars_dataframe()
             br_step_data = br_step_data.append(i_run_data, ignore_index=True)
     br_step_data.to_csv("radar_batch.csv")
+    #TODO I need to inspect this dataframe to get a better chart
+    plt.plot(br_step_data)
+    plt.show()
+

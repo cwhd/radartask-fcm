@@ -15,8 +15,12 @@ class Worker():
         self.fcm = '' # TODO this is the actual mental model
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
-        self.learning_threshold = .7
-        self.weight_memory = [[]]
+        self.learning_threshold = .6
+        self.weight_memory = []
+        self.current_correct_count = 0
+        self.current_check_count = 0
+        #TODO current weights should come from the DB at first...
+        self.current_weights = [0,0,0,0,0,0,0,0,0,0,0,0]
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
@@ -43,16 +47,28 @@ class Worker():
 
     def learn(self, is_correct):
         print('updating mental model with new weights for worker ' + str(self.model_id))
-        if(not is_correct):
-            #TODO call neo service here, update model for this worker
-            #self.neoService.callNeo()
-            new_weights = self.fcmService.getNewWeights()
-            fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
+        self.current_check_count += 1
+        if(is_correct):
+            self.current_correct_count += 1
 
-            print('wrong, changing mental model!')
-            print(new_weights)
+        #check if there are any weights saved in weight_memory...
+        #if there are grab 1 and tweak it, or grab 2 and combine them
+        #TODO I wonder if we can make that process fuzzy as well, not so procedural
+        # - that could be a good book - "fuzzy code"
+        if(self.current_check_count > 4):
+            if(self.current_correct_count / self.current_check_count >= self.learning_threshold):
+                yay = "keep this state"
+                self.weight_memory.append(self.current_weights)
+                print("keeping weights")
+                print(self.current_weights)
+            else:
+                print('wrong, changing mental model!')
+                new_weights = self.fcmService.getNewWeights()                
+                fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
+                self.current_weights = new_weights
+                print(new_weights)
+            self.current_check_count = 0
 
-        self.fcm = ''
         return "learning"
 
     def manage_memory(self):
