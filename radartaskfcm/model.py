@@ -57,7 +57,7 @@ class RadarTask(Model):
         for agent in model.schedule.agents:
             total_count += agent.correct_count
 
-        print("Good votes: " + str(total_count))
+        #print("Good votes: " + str(total_count))
         return total_count
 
     @staticmethod
@@ -66,5 +66,5 @@ class RadarTask(Model):
         for agent in model.schedule.agents:
             total_count += agent.wrong_count
 
-        print("bad votes: " + str(total_count))
+        #print("bad votes: " + str(total_count))
         return total_count

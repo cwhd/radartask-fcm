@@ -72,12 +72,12 @@ class FCMUtils():
         headers = {'content-type': 'application/json'}
         fcm_request = requests.post('http://localhost:8080/model', data=delete_cypher, headers=headers)
         results = fcm_request.json()
-        print("delete results: " + str(results))
+        #print("delete results: " + str(results))
         #make sure this is 200 then...
         headers = {'content-type': 'application/json'}
         fcm_request = requests.post('http://localhost:8080/model', data=add_cypher, headers=headers)
         results = fcm_request.json()
-        print("delete results: " + str(results))
+        #print("delete results: " + str(results))
         #print("add cypher: " + add_cypher)
         #print("delete cypher: " + delete_cypher)
         

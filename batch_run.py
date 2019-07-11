@@ -9,13 +9,17 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+def get_df_name(df):
+    name =[x for x in globals() if globals()[x] is df][0]
+    return name
+
 # parameter lists for each parameter to be tested in batch run
 br_params = {"use_team": [False, False, False] }
 
 br = BatchRunner(RadarTask,
                  br_params,
                  iterations=1,
-                 max_steps=100,
+                 max_steps=1000,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
 if __name__ == '__main__':
@@ -26,8 +30,10 @@ if __name__ == '__main__':
         if isinstance(br_df["Data Collector"][i], DataCollector):
             i_run_data = br_df["Data Collector"][i].get_model_vars_dataframe()
             br_step_data = br_step_data.append(i_run_data, ignore_index=True)
-    br_step_data.to_csv("radar_batch.csv")
-    #TODO I need to inspect this dataframe to get a better chart
-    plt.plot(br_step_data)
-    plt.show()
 
+    br_step_data.to_csv("radar_batch.csv")
+    plt.title('Collected Awesome')
+    plt.xlabel('Ticks')
+    plt.ylabel('Count')
+    br_step_data.plot.line()
+    plt.show()
