@@ -19,10 +19,13 @@ br_params = {"use_team": [False, False, False] }
 br = BatchRunner(RadarTask,
                  br_params,
                  iterations=1,
-                 max_steps=1000,
+                 max_steps=500,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
 if __name__ == '__main__':
+    print('--------------------------------------------------------------')
+    print('TALLY HO')
+    print('--------------------------------------------------------------')
     br.run_all()
     br_df = br.get_model_vars_dataframe()
     br_step_data = pd.DataFrame()
@@ -32,8 +35,6 @@ if __name__ == '__main__':
             br_step_data = br_step_data.append(i_run_data, ignore_index=True)
 
     br_step_data.to_csv("radar_batch.csv")
-    plt.title('Collected Awesome')
-    plt.xlabel('Ticks')
-    plt.ylabel('Count')
-    br_step_data.plot.line()
+    br_step_data.plot.xlabel = 'Ticks'
+    br_step_data.plot.line(title='Correct vs. Incorrect Analysis')
     plt.show()

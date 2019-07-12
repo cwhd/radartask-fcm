@@ -50,6 +50,7 @@ class FCMUtils():
             "(`2` :Prop2 {modelId:'" + model_id + "',goal:'property2',description:'property2'}) , "
             "(`3` :Prop3 {modelId:'" + model_id + "',goal:'property3',description:'property3'}) , "
             "(`4` :`Decide Bad` {modelId:'" + model_id + "',goal:'bad',description:'bad'}) , "
+            "(`5` :`Decide Neutral` {modelId:'" + model_id + "',goal:'neutral',description:'neutral'}) , "
             "(`1`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`0`), " #prop1->good
             "(`2`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`0`), " #prop2->good
             "(`3`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`0`), " #prop3->good
@@ -61,8 +62,10 @@ class FCMUtils():
             "(`1`)-[:`affects` {value:'" + str(new_weights[8]) + "'}]->(`3`), "
             "(`3`)-[:`affects` {value:'" + str(new_weights[9]) + "'}]->(`4`), " #prop3->bad
             "(`2`)-[:`affects` {value:'" + str(new_weights[10]) + "'}]->(`4`), " #prop2->bad
-            "(`1`)-[:`affects` {value:'" + str(new_weights[11]) + "'}]->(`4`)") #prop1->bad
-            
+            "(`1`)-[:`affects` {value:'" + str(new_weights[11]) + "'}]->(`4`)," #prop1->bad
+            "(`2`)-[:`affects` {value:'" + str(new_weights[12]) + "'}]->(`5`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[13]) + "'}]->(`5`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[14]) + "'}]->(`5`)")
         return cypher_create
 
     def replaceFCM(self, model_id, new_weights):
@@ -83,7 +86,7 @@ class FCMUtils():
         
     def getNewWeights(self):
 
-        weight_count = 12
+        weight_count = 15
         weights = []
         for i in range(weight_count):
             weights.append(random.randint(-100,100)/100)
