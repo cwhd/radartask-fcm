@@ -82,18 +82,18 @@ class FCMUtils():
             "(`3` :Prop3 {modelId:'" + model_id + "',goal:'property3',description:'property3'}) , "
             "(`4` :`Decide Bad` {modelId:'" + model_id + "',goal:'bad',description:'bad'}) , "
             "(`5` :`Decide Neutral` {modelId:'" + model_id + "',goal:'neutral',description:'neutral'}) , "
-            "(`1`)-[:`affects` {value:'0.5'}]->(`0`), " #prop1->good
-            "(`2`)-[:`affects` {value:'0.5'}]->(`0`), " #prop2->good
-            "(`3`)-[:`affects` {value:'0.5'}]->(`0`), " #prop3->good
+            "(`1`)-[:`affects` {value:'-0.5'}]->(`0`), " #prop1->good
+            "(`2`)-[:`affects` {value:'-0.5'}]->(`0`), " #prop2->good
+            "(`3`)-[:`affects` {value:'-0.5'}]->(`0`), " #prop3->good
             "(`3`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`2`), "
             "(`3`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`1`), "
             "(`2`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`1`), "
             "(`2`)-[:`affects` {value:'" + str(new_weights[3]) + "'}]->(`3`), "
             "(`1`)-[:`affects` {value:'" + str(new_weights[4]) + "'}]->(`2`), "
             "(`1`)-[:`affects` {value:'" + str(new_weights[5]) + "'}]->(`3`), "
-            "(`3`)-[:`affects` {value:'-0.5'}]->(`4`), " #prop3->bad
-            "(`2`)-[:`affects` {value:'-0.5'}]->(`4`), " #prop2->bad
-            "(`1`)-[:`affects` {value:'-0.5'}]->(`4`)," #prop1->bad
+            "(`3`)-[:`affects` {value:'0.5'}]->(`4`), " #prop3->bad
+            "(`2`)-[:`affects` {value:'0.5'}]->(`4`), " #prop2->bad
+            "(`1`)-[:`affects` {value:'0.5'}]->(`4`)," #prop1->bad
             "(`2`)-[:`affects` {value:'0'}]->(`5`), " #prop2->neutral
             "(`1`)-[:`affects` {value:'0.3'}]->(`5`), " #prop1->neutral
             "(`3`)-[:`affects` {value:'-0.3'}]->(`5`)") #prop3->neutral            

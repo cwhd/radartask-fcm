@@ -17,6 +17,7 @@ class Worker():
         self.fcmService = FCMUtils()
         self.learning_threshold = .6
         self.weight_memory = []
+        self.bad_weight_memory = []
         self.current_correct_count = 0
         self.current_check_count = 0
         #self.number_of_weights = 15 # 7
@@ -24,16 +25,21 @@ class Worker():
         #TODO current weights should come from the DB at first...
         #self.current_weights = [.5,.5,.5,.5,.5,.5,.5,.5,.5,-.5,-.5,-.5, 0, .3, -.3]
         self.current_weights = [.5,.5,.5,.5,.5,.5,.3]
+        #self.current_weights = [-1,-1,-1,-1,-1,-1,.3]
         self.last_decision = ''
+        self.mutation_chance = 10
+        #initialize weights
+        fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
+
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
         #the values are 1-3, so subtracting 2 gives us -1, 0, or 1
         radar_info[:] = [x - 2 for x in radar_info]
 
-        fcm_input1 = { 'name':'property1', 'act':'TANH', 'output':radar_info[0], 'fixedOutput': False }
-        fcm_input2 = { 'name':'property2', 'act':'TANH', 'output':radar_info[1], 'fixedOutput': False }
-        fcm_input3 = { 'name':'property3', 'act':'TANH', 'output':radar_info[2], 'fixedOutput': False }
+        fcm_input1 = { 'name':'property1', 'act':'SIGMOID', 'output':radar_info[0], 'fixedOutput': False }
+        fcm_input2 = { 'name':'property2', 'act':'SIGMOID', 'output':radar_info[1], 'fixedOutput': False }
+        fcm_input3 = { 'name':'property3', 'act':'SIGMOID', 'output':radar_info[2], 'fixedOutput': False }
         body_input = [fcm_input1, fcm_input2, fcm_input3]
         concepts = { 'concepts':body_input }
         fcm_result = self.fcmService.getFCM(self.model_id, concepts)
@@ -54,6 +60,44 @@ class Worker():
 
         return self.last_decision
 
+    #do some random mutation
+    def _mutate_weights(self, weights, mutate_count):
+        new_weights = self.fcmService.getNewWeights()
+        for i in range(mutate_count):
+            random_property = random.randint(0,self.number_of_weights - 1)
+            weights[random_property] = new_weights[random_property]
+
+        return weights
+
+    def sweep_learn(self, is_correct):
+        #print('sweep learning')
+        sweep_threshold = .1
+        self.current_check_count += 1
+        if(is_correct):
+            self.current_correct_count += 1
+
+        if(self.current_check_count > 4):
+            if(self.current_correct_count / self.current_check_count >= self.learning_threshold):
+                print('made the correct threshold')
+                print(self.current_weights)
+                print('----------------------------------------')
+            else:
+                print('failed the correct threshold, sweeping')
+                for i in range(len(self.current_weights)):
+                    if(self.current_weights[i] + sweep_threshold > 1):
+                        sweep_threshold = sweep_threshold * -1
+                    self.current_weights[i] = self.current_weights[i] + sweep_threshold
+                
+                fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
+                #print("new weights: ")
+                #print(self.current_weights)
+
+            self.current_check_count = 0
+            self.current_correct_count = 0
+
+        #TODO start all weights at -1
+        #TODO sweep up by .05, that is the granularity
+        #TODO 
 
     def learn(self, is_correct):
         #TODO maybe I need to have different lists for how many are right, doing more mutation at 
@@ -113,14 +157,7 @@ class Worker():
                 memory_length = len(self.weight_memory)
                 #print('memory length:' + str(memory_length))
                 if(memory_length == 1):
-                    #just replace 2 weights randomly
-                    random_property_1 = random.randint(0,self.number_of_weights - 1)
-                    random_property_2 = random.randint(0,self.number_of_weights - 1)
-                    print('Memory 1:')
-                    #print(self.current_weights)
-                    self.current_weights[random_property_1] = new_weights[random_property_1]
-                    self.current_weights[random_property_2] = new_weights[random_property_2]
-                    #print(self.current_weights)
+                    self.current_weights = self._mutate_weights(self.current_weights, 2)
 
                 elif(memory_length > 2):
                     #print('Memory > 2:')
@@ -144,6 +181,9 @@ class Worker():
                             child.append(random_parent_weights_2[1][i])
 
                     new_weights = child
+
+                    if(random.randint(0,100) <= self.mutation_chance):
+                        self.current_weights = self._mutate_weights(self.current_weights, 1)
 
                     #print('happy family')
                     #print(random_parent_weights_1[1])
@@ -255,10 +295,13 @@ class Team(Agent):
             self.wrong_count += 1
             is_correct = False
 
-        for i in range(self.team_count):
-            worker = self.team_members[i]
-            #each worker learns at thier own pace
-            if(worker.last_decision == actual_aircraft_type):
-                worker.learn(True)
-            else:
-                worker.learn(False)
+        #for i in range(self.team_count):
+        #    worker = self.team_members[i]
+        #    #each worker learns at thier own pace
+        #    if(worker.last_decision == actual_aircraft_type):
+        #        #sweep_learn
+        #        worker.learn(True)
+        #        #worker.sweep_learn(True)
+        #   else:
+        #      worker.learn(False)
+        #     #worker.sweep_learn(False)

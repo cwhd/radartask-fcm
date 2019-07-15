@@ -19,7 +19,7 @@ br_params = {"use_team": [False, False, False] }
 br = BatchRunner(RadarTask,
                  br_params,
                  iterations=1,
-                 max_steps=500,
+                 max_steps=100,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
 if __name__ == '__main__':
