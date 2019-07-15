@@ -44,7 +44,8 @@ class FCMUtils():
 
     def generateCreateCypher(self, model_id, new_weights):
 
-        cypher_create =  ("CREATE "
+        '''
+        cypher_create_old =  ("CREATE "
             "(`0` :`Decide Good` {modelId:'" + model_id + "',goal:'good',description:'good'}) , "
             "(`1` :Prop1 {modelId:'" + model_id + "',goal:'property1',description:'property1'}) , "
             "(`2` :Prop2 {modelId:'" + model_id + "',goal:'property2',description:'property2'}) , "
@@ -63,9 +64,44 @@ class FCMUtils():
             "(`3`)-[:`affects` {value:'" + str(new_weights[9]) + "'}]->(`4`), " #prop3->bad
             "(`2`)-[:`affects` {value:'" + str(new_weights[10]) + "'}]->(`4`), " #prop2->bad
             "(`1`)-[:`affects` {value:'" + str(new_weights[11]) + "'}]->(`4`)," #prop1->bad
-            "(`2`)-[:`affects` {value:'" + str(new_weights[12]) + "'}]->(`5`), "
-            "(`1`)-[:`affects` {value:'" + str(new_weights[13]) + "'}]->(`5`), "
-            "(`3`)-[:`affects` {value:'" + str(new_weights[14]) + "'}]->(`5`)")
+            "(`2`)-[:`affects` {value:'" + str(new_weights[12]) + "'}]->(`5`), " #prop2->neutral
+            "(`1`)-[:`affects` {value:'" + str(new_weights[13]) + "'}]->(`5`), " #prop1->neutral
+            "(`3`)-[:`affects` {value:'" + str(new_weights[14]) + "'}]->(`5`)") #prop3->neutral
+        '''
+        #only need 7 if we hard code decisions and find the neutral
+        #neutral needs to be a formula...maybe just take one weight and do something to it
+        neutral_weights = []
+        neutral_weights.append(new_weights[6])
+        neutral_weights.append(new_weights[6]*1)
+        neutral_weights.append(new_weights[6]*1)
+        random.shuffle(neutral_weights)
+        cypher_create =  ("CREATE "
+            "(`0` :`Decide Good` {modelId:'" + model_id + "',goal:'good',description:'good'}) , "
+            "(`1` :Prop1 {modelId:'" + model_id + "',goal:'property1',description:'property1'}) , "
+            "(`2` :Prop2 {modelId:'" + model_id + "',goal:'property2',description:'property2'}) , "
+            "(`3` :Prop3 {modelId:'" + model_id + "',goal:'property3',description:'property3'}) , "
+            "(`4` :`Decide Bad` {modelId:'" + model_id + "',goal:'bad',description:'bad'}) , "
+            "(`5` :`Decide Neutral` {modelId:'" + model_id + "',goal:'neutral',description:'neutral'}) , "
+            "(`1`)-[:`affects` {value:'0.5'}]->(`0`), " #prop1->good
+            "(`2`)-[:`affects` {value:'0.5'}]->(`0`), " #prop2->good
+            "(`3`)-[:`affects` {value:'0.5'}]->(`0`), " #prop3->good
+            "(`3`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`2`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`1`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`1`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[3]) + "'}]->(`3`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[4]) + "'}]->(`2`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[5]) + "'}]->(`3`), "
+            "(`3`)-[:`affects` {value:'-0.5'}]->(`4`), " #prop3->bad
+            "(`2`)-[:`affects` {value:'-0.5'}]->(`4`), " #prop2->bad
+            "(`1`)-[:`affects` {value:'-0.5'}]->(`4`)," #prop1->bad
+            "(`2`)-[:`affects` {value:'0'}]->(`5`), " #prop2->neutral
+            "(`1`)-[:`affects` {value:'0.3'}]->(`5`), " #prop1->neutral
+            "(`3`)-[:`affects` {value:'-0.3'}]->(`5`)") #prop3->neutral            
+
+            #"(`2`)-[:`affects` {value:'" + str(neutral_weights[0]) + "'}]->(`5`), " #prop2->neutral
+            #"(`1`)-[:`affects` {value:'" + str(neutral_weights[1]) + "'}]->(`5`), " #prop1->neutral
+            #"(`3`)-[:`affects` {value:'" + str(neutral_weights[2]) + "'}]->(`5`)") #prop3->neutral            
+
         return cypher_create
 
     def replaceFCM(self, model_id, new_weights):
@@ -86,7 +122,7 @@ class FCMUtils():
         
     def getNewWeights(self):
 
-        weight_count = 15
+        weight_count = 7
         weights = []
         for i in range(weight_count):
             weights.append(random.randint(-100,100)/100)

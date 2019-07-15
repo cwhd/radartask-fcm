@@ -15,12 +15,16 @@ class Worker():
         self.fcm = '' # TODO this is the actual mental model
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
-        self.learning_threshold = .4
+        self.learning_threshold = .6
         self.weight_memory = []
         self.current_correct_count = 0
         self.current_check_count = 0
+        #self.number_of_weights = 15 # 7
+        self.number_of_weights = 7
         #TODO current weights should come from the DB at first...
-        self.current_weights = [.5,.5,.5,.5,.5,.5,.5,.5,.5,-.5,-.5,-.5, 0, .3, -.3]
+        #self.current_weights = [.5,.5,.5,.5,.5,.5,.5,.5,.5,-.5,-.5,-.5, 0, .3, -.3]
+        self.current_weights = [.5,.5,.5,.5,.5,.5,.3]
+        self.last_decision = ''
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
@@ -40,13 +44,16 @@ class Worker():
         neutral_guess = fcm_result['neutral']
 
         if(neutral_guess == 1):
-            return "Neutral"
+            self.last_decision = "Neutral"
         elif(good_guess > 0):
-            return "Good"
+            self.last_decision = "Good"
         elif(bad_guess > 0):
-            return "Bad"
+            self.last_decision = "Bad"
         else:
-            return "Neutral"
+            self.last_decision = "Neutral"
+
+        return self.last_decision
+
 
     def learn(self, is_correct):
         #TODO maybe I need to have different lists for how many are right, doing more mutation at 
@@ -61,6 +68,7 @@ class Worker():
         #TODO I wonder if we can make that process fuzzy as well, not so procedural
         # - that could be a good book - "fuzzy code"
         if(self.current_check_count > 4):
+            #print('.', end='')
             #this section kills off lower performing weights in memory
             two_scorers = [t for t in self.weight_memory if t[0] == 2]
             three_scorers = [t for t in self.weight_memory if t[0] == 3]
@@ -69,17 +77,26 @@ class Worker():
 
             #increase learning threshold if we have good performers
             if(len(four_scorers) > 5 or len(five_scorers) > 4):
-                self.learning_threshold = .6
+                self.learning_threshold = .8
             elif(len(four_scorers) > 10 or len(five_scorers) > 8):
                 self.learning_threshold = .8
 
             if(self.current_correct_count / self.current_check_count >= self.learning_threshold):
+                print('CORRECT')
+                #print('--------------------------')
                 #just in case it already exists
+                print('Score Mix Before: Twos:' + str(len(two_scorers)) + ', Threes: ' + str(len(three_scorers)) + ', Fours: ' + str(len(four_scorers)) + ', Fives: ' + str(len(five_scorers)))
                 same_to_go = [t for t in self.weight_memory if t[1] == self.current_weights]
+                #print('Checking weights...')
+                #print(self.current_weights)
+                #print(same_to_go)
+                #print(self.weight_memory)
+                #print('-------------------------------------------------')
 
                 if(len(same_to_go) < 1):
                     #self.weight_memory.remove((self.current_correct_count, self.current_weights))
                     self.weight_memory.append((self.current_correct_count, self.current_weights))
+
                 #print('--------------------------------------')
                 #print('CORRECT!!! adding memory: ' + str(len(self.weight_memory)))
                 #print('--------------------------------------')
@@ -97,61 +114,78 @@ class Worker():
                 #print('memory length:' + str(memory_length))
                 if(memory_length == 1):
                     #just replace 2 weights randomly
-                    random_property_1 = random.randint(0,14)
-                    random_property_2 = random.randint(0,14)
+                    random_property_1 = random.randint(0,self.number_of_weights - 1)
+                    random_property_2 = random.randint(0,self.number_of_weights - 1)
+                    print('Memory 1:')
+                    #print(self.current_weights)
                     self.current_weights[random_property_1] = new_weights[random_property_1]
                     self.current_weights[random_property_2] = new_weights[random_property_2]
+                    #print(self.current_weights)
 
-                elif(memory_length > 1):
-                    #print('combining properties...')
-                    #combine 2 of the previous successes
-                    random_property_1 = random.randint(0,14)
-                    random_property_2 = random.randint(0,14)
-                    random_memory_weights_1 = random.randint(0, memory_length - 1)
-                    random_memory_weights_2 = random.randint(0, memory_length - 1)
+                elif(memory_length > 2):
+                    #print('Memory > 2:')
+                    #genetic mutation...
+                    random_parent_index_1 = random.randint(0, memory_length - 1)
+                    random_parent_index_2 = random.randint(0, memory_length - 2)
 
-                    random_previous_weights_1 = self.weight_memory[random_memory_weights_1]
-                    #make sure to get a different mate
-                    #self.weight_memory.remove(random_previous_weights_1)
-                    random_previous_weights_2 = self.weight_memory[random_memory_weights_2]
+                    random_parent_weights_1 = self.weight_memory[random_parent_index_1]
+                    self.weight_memory.remove(random_parent_weights_1)
+                    random_parent_weights_2 = self.weight_memory[random_parent_index_2]
 
-                    child_weights = random_previous_weights_1[1]
-                    child_weights[random_property_1] = random_previous_weights_2[1][random_property_1]
-                    child_weights[random_property_2] = random_previous_weights_2[1][random_property_2]
-                    #self.weight_memory.append(random_previous_weights_1)
+                    self.weight_memory.append(random_parent_weights_1)
 
-                    new_weights = child_weights
+                    child = []
+                    for i in range(len(random_parent_weights_1[1])):
+                        if(random.randint(0,100) > 89):
+                            child.append(random.randint(0,100)/100)
+                        elif(i % 2 == 0):
+                            child.append(random_parent_weights_1[1][i])
+                        else:
+                            child.append(random_parent_weights_2[1][i])
 
-                    #if there are 4 scorers, remove half the 3 scorers and 2/3 of the 2 scorers?
-                    #print('removing low scorers...')
-                    if(len(five_scorers) > 0):
-                        #print('We have 5s..2: ' + str(len(two_scorers)) + ', 3: ' + str(len(three_scorers)) + ', 4: ' + str(len(four_scorers)) + ', 5: ' + str(len(five_scorers)))
-                        for i in range(int(round(len(three_scorers)*.6))) :
-                            self.weight_memory.remove(three_scorers[i])
-                        for i in range(int(round(len(two_scorers)*.8))) :
-                            self.weight_memory.remove(two_scorers[i])
-                    elif(len(four_scorers) > 0):
-                        #print('removing low scorers...2: ' + str(len(two_scorers)) + ', 3: ' + str(len(three_scorers)) + ', 4: ' + str(len(four_scorers)))
-                        for i in range(int(round(len(three_scorers)/2))) :
-                            self.weight_memory.remove(three_scorers[i])
-                        for i in range(int(round(len(two_scorers)*.6))) :
-                            self.weight_memory.remove(two_scorers[i])
-                        #print('New score update: ' + str(len(two_scorers)) + ', 3: ' + str(len(three_scorers)) + ', 4: ' + str(len(four_scorers)))
-                    elif(len(four_scorers) > 20):
-                        for i in range(int(round(len(four_scorers)*.5))) :
-                            self.weight_memory.remove(four_scorers[i])
+                    new_weights = child
 
-                    print('Score Mix: Twos:' + str(len(two_scorers)) + ', Threes: ' + str(len(three_scorers)) + ', Fours: ' + str(len(four_scorers)) + ', Fives: ' + str(len(five_scorers)))
+                    #print('happy family')
+                    #print(random_parent_weights_1[1])
+                    #print(random_parent_weights_2[1])
+                    #print(child)
+
+                    #print('Score Mix After: Twos:' + str(len(two_scorers)) + ', Threes: ' + str(len(three_scorers)) + ', Fours: ' + str(len(four_scorers)) + ', Fives: ' + str(len(five_scorers)))
 
                 fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
                 self.current_weights = new_weights
                 #print("new weights: ")
-                #print(new_weights)
+                print('Weight Memory: ' + str(len(self.weight_memory)))
 
             self.current_check_count = 0
             self.current_correct_count = 0
 
         return "learning"
+
+    def _clean_history(self):
+        #if there are 4 scorers, remove half the 3 scorers and 2/3 of the 2 scorers?
+        #print('removing low scorers...')
+        two_scorers = [t for t in self.weight_memory if t[0] == 2]
+        three_scorers = [t for t in self.weight_memory if t[0] == 3]
+        four_scorers = [t for t in self.weight_memory if t[0] == 4]
+        five_scorers = [t for t in self.weight_memory if t[0] == 5]
+
+        if(len(five_scorers) > 2):
+            #print('We have 5s..2: ' + str(len(two_scorers)) + ', 3: ' + str(len(three_scorers)) + ', 4: ' + str(len(four_scorers)) + ', 5: ' + str(len(five_scorers)))
+            for i in range(int(round(len(three_scorers)*.6))) :
+                self.weight_memory.remove(three_scorers[i])
+            for i in range(int(round(len(two_scorers)*.8))) :
+                self.weight_memory.remove(two_scorers[i])
+        elif(len(four_scorers) > 4):
+            #print('removing low scorers...2: ' + str(len(two_scorers)) + ', 3: ' + str(len(three_scorers)) + ', 4: ' + str(len(four_scorers)))
+            for i in range(int(round(len(three_scorers)/2))) :
+                self.weight_memory.remove(three_scorers[i])
+            for i in range(int(round(len(two_scorers)*.6))) :
+                self.weight_memory.remove(two_scorers[i])
+            #print('New score update: ' + str(len(two_scorers)) + ', 3: ' + str(len(three_scorers)) + ', 4: ' + str(len(four_scorers)))
+        elif(len(four_scorers) > 20):
+            for i in range(int(round(len(four_scorers)*.5))) :
+                self.weight_memory.remove(four_scorers[i])
 
 class Team(Agent):
     def __init__(self, unique_id, pos, model):
@@ -168,7 +202,7 @@ class Team(Agent):
         self.correct_count = 0
         self.wrong_count = 0
         for i in range(3):
-            print('using models: ' + str(i + 4))
+            #print('using models: ' + str(i + 4))
             team_member = Worker("radar" + str(i + 4))
             self.team_members.append(team_member)
 
@@ -212,11 +246,6 @@ class Team(Agent):
         else:
             final_vote = "Neutral"
 
-        #hack to get around neutral
-        #if(final_vote == "Neutral"):
-        #    final_vote = 'Friendly'
-        #if(actual_aircraft_type == 'Neutral'):
-        #    actual_aircraft_type = 'Friendly'
         actual_aircraft_type = self.check_aircraft_type(radar_info)
 
         is_correct = True
@@ -228,4 +257,8 @@ class Team(Agent):
 
         for i in range(self.team_count):
             worker = self.team_members[i]
-            worker.learn(is_correct)
+            #each worker learns at thier own pace
+            if(worker.last_decision == actual_aircraft_type):
+                worker.learn(True)
+            else:
+                worker.learn(False)
