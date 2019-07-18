@@ -17,7 +17,7 @@ class RadarTask(Model):
 
     description = 'Social Simulation with cognitive agents.'
 
-    def __init__(self, height=grid_h, width=grid_w, use_team=False):
+    def __init__(self, height=grid_h, width=grid_w, use_team=False, info_type='distributed'):
         super().__init__()
 
         self.height = height
@@ -29,7 +29,7 @@ class RadarTask(Model):
 
         x = 5
         y = 5
-        team = Team(self.next_id(), (x, y), self)
+        team = Team(self.next_id(), (x, y), self, info_type)
         self.grid.place_agent(team, (x, y))
         self.schedule.add(team) 
 

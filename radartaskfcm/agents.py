@@ -227,24 +227,36 @@ class Worker():
             for i in range(int(round(len(four_scorers)*.5))) :
                 self.weight_memory.remove(four_scorers[i])
 
-class Team(Agent):
-    def __init__(self, unique_id, pos, model):
-        '''
-        grid: The MultiGrid object in which the agent lives.
-        x: The agent's current x coordinate
-        y: The agent's current y coordinate
-       '''
-        super().__init__(unique_id, model)
-        self.breed = 'manager'
-        self.pos = pos
-        self.team_count = 3
-        self.team_members = []
-        self.correct_count = 0
-        self.wrong_count = 0
-        for i in range(3):
-            #print('using models: ' + str(i + 4))
-            team_member = Worker("radar" + str(i + 4))
-            self.team_members.append(team_member)
+#common functions for different scenarios
+class BaseAgent(Agent):
+
+    #assign aircraft properties in a distributed way
+    def assign_distributed(self, radar_info, team_members):
+        print('distributed info')
+        decisions = []
+        for i in range(9):
+            worker = team_members[i]
+            if i == 0:
+                decisions.append(worker.decide(radar_info[0:3])) 
+            elif i < 7 and i > 0:
+                decisions.append(worker.decide(radar_info[i:i+3])) 
+            elif i == 7:
+                decisions.append(worker.decide([radar_info[7], radar_info[8], radar_info[0]])) 
+            elif i == 8:
+                decisions.append(worker.decide([radar_info[8], radar_info[0], radar_info[1]])) 
+
+        return decisions
+
+    #assing aircraft properties in a blocked way
+    def assign_blocked(self, radar_info, team_members):
+        print('blocked info')
+        decisions = []
+        for i in range(3): 
+            #TODO get groups of workers
+            for j in range(3): #assign 3 workers at a time 012, 345, 678 or 036, 147, 258
+                worker = team_members[i+(3*j)]
+                decisions.append(worker.decide(radar_info[i*3:i*3+3])) #get worker decision
+        return decisions
 
     def get_radar_info(self):
         #Randomly generate 9 attributes, each with a value from 1-3
@@ -268,14 +280,49 @@ class Team(Agent):
 
         return aircraft_type
 
+class Hierarchy(BaseAgent):
+    def __init__(self, unique_id, pos, model):
+        '''
+        grid: The MultiGrid object in which the agent lives.
+        x: The agent's current x coordinate
+        y: The agent's current y coordinate
+       '''
+        super().__init__(unique_id, model)
+        self.breed = 'hierarchy'
+
+    def step(self):
+        print('h-stepping')
+        radar_info = self.get_radar_info()
+
+
+class Team(BaseAgent):
+    def __init__(self, unique_id, pos, model, info_type):
+        '''
+        grid: The MultiGrid object in which the agent lives.
+        x: The agent's current x coordinate
+        y: The agent's current y coordinate
+       '''
+        super().__init__(unique_id, model)
+        self.breed = 'team'
+        self.pos = pos
+        self.team_count = 9 
+        self.team_members = []
+        self.correct_count = 0
+        self.wrong_count = 0
+        self.info_type = info_type
+        for i in range(self.team_count):
+            print('using models: ' + str(i + 4))
+            team_member = Worker("radar" + str(i + 4))
+            self.team_members.append(team_member)
+
     def step(self):
         radar_info = self.get_radar_info()
         #print("radar info:" + str(radar_info))
         decisions = []
-        for i in range(self.team_count):
-            worker = self.team_members[i]
-            #print("worker:" + str(i) + " " + str(worker))
-            decisions.append(worker.decide(radar_info[i*3:i*3+3])) #get worker decision
+        if(self.info_type == 'distributed'):
+            decisions = self.assign_distributed(radar_info, self.team_members)
+        else:
+            decisions = self.assign_blocked(radar_info, self.team_members)
         
         #print("decisions: " + str(decisions))
         final_vote = ''
@@ -295,13 +342,10 @@ class Team(Agent):
             self.wrong_count += 1
             is_correct = False
 
-        #for i in range(self.team_count):
-        #    worker = self.team_members[i]
-        #    #each worker learns at thier own pace
-        #    if(worker.last_decision == actual_aircraft_type):
-        #        #sweep_learn
-        #        worker.learn(True)
-        #        #worker.sweep_learn(True)
-        #   else:
-        #      worker.learn(False)
-        #     #worker.sweep_learn(False)
+        for i in range(self.team_count):
+            worker = self.team_members[i]
+            #each worker learns at thier own pace
+            if(worker.last_decision == actual_aircraft_type):
+                worker.learn(True)
+            else:
+                worker.learn(False)
