@@ -22,17 +22,16 @@ class Worker():
         self.current_check_count = 0
         #self.number_of_weights = 15 # 7
         self.number_of_weights = 7
-        #TODO current weights should come from the DB at first...
-        #self.current_weights = [.5,.5,.5,.5,.5,.5,.5,.5,.5,-.5,-.5,-.5, 0, .3, -.3]
         self.current_weights = [.5,.5,.5,.5,.5,.5,.3]
-        #self.current_weights = [-1,-1,-1,-1,-1,-1,.3]
         self.last_decision = ''
+        self.last_certainty = 0
         self.mutation_chance = 10
         #initialize weights
         fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
 
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
+    #TODO return a tuple with confidence
     def decide(self,radar_info):
         #the values are 1-3, so subtracting 2 gives us -1, 0, or 1
         radar_info[:] = [x - 2 for x in radar_info]
@@ -45,18 +44,33 @@ class Worker():
         fcm_result = self.fcmService.getFCM(self.model_id, concepts)
 
         #print(fcm_result)
+        #print('fcm_result: good:' + str(fcm_result['good']) + ' bad:' + str(fcm_result['bad']) + ' neutral:' + str(fcm_result['neutral']))
         good_guess = fcm_result['good']
         bad_guess = fcm_result['bad']
         neutral_guess = fcm_result['neutral']
 
+        #make decision & determine certainty
         if(neutral_guess == 1):
             self.last_decision = "Neutral"
+            if(neutral_guess ==  good_guess or neutral_guess == bad_guess):
+                self.last_certainty = 0.5
+            else:
+                self.last_certainty = 1
         elif(good_guess > 0):
             self.last_decision = "Good"
+            if(good_guess == neutral_guess or good_guess == bad_guess):
+                self.last_certainty = 0.5
+            else:
+                self.last_certainty = 1
         elif(bad_guess > 0):
             self.last_decision = "Bad"
+            if(bad_guess == neutral_guess or good_guess == bad_guess):
+                self.last_certainty = 0.5
+            else:
+                self.last_certainty = 1
         else:
             self.last_decision = "Neutral"
+            self.last_certainty = 0.3
 
         return self.last_decision
 
@@ -69,6 +83,7 @@ class Worker():
 
         return weights
 
+    #TODO this can probably go away
     def sweep_learn(self, is_correct):
         #print('sweep learning')
         sweep_threshold = .1
@@ -112,7 +127,6 @@ class Worker():
         #TODO I wonder if we can make that process fuzzy as well, not so procedural
         # - that could be a good book - "fuzzy code"
         if(self.current_check_count > 4):
-            #print('.', end='')
             #this section kills off lower performing weights in memory
             two_scorers = [t for t in self.weight_memory if t[0] == 2]
             three_scorers = [t for t in self.weight_memory if t[0] == 3]
@@ -131,37 +145,18 @@ class Worker():
                 #just in case it already exists
                 print('Score Mix Before: Twos:' + str(len(two_scorers)) + ', Threes: ' + str(len(three_scorers)) + ', Fours: ' + str(len(four_scorers)) + ', Fives: ' + str(len(five_scorers)))
                 same_to_go = [t for t in self.weight_memory if t[1] == self.current_weights]
-                #print('Checking weights...')
-                #print(self.current_weights)
-                #print(same_to_go)
-                #print(self.weight_memory)
-                #print('-------------------------------------------------')
 
                 if(len(same_to_go) < 1):
                     #self.weight_memory.remove((self.current_correct_count, self.current_weights))
                     self.weight_memory.append((self.current_correct_count, self.current_weights))
 
-                #print('--------------------------------------')
-                #print('CORRECT!!! adding memory: ' + str(len(self.weight_memory)))
-                #print('--------------------------------------')
-                #print(self.weight_memory)
-                #TODO sort the memory, put better results on top
-                #print("keeping current weights; check count: " + str(self.current_correct_count) + ", current threshold = " + str(self.current_correct_count / self.current_check_count))
-                #print(self.current_weights)
             else:
-                #TODO use the tuple to select the best: results = [t[1] for t in mylist if t[0] == 10]
-                #print('wrong, changing mental model!')
                 new_weights = self.fcmService.getNewWeights()
-                #print('new weights:')
-                #print(new_weights)
                 memory_length = len(self.weight_memory)
-                #print('memory length:' + str(memory_length))
                 if(memory_length == 1):
                     self.current_weights = self._mutate_weights(self.current_weights, 2)
 
                 elif(memory_length > 2):
-                    #print('Memory > 2:')
-                    #genetic mutation...
                     random_parent_index_1 = random.randint(0, memory_length - 1)
                     random_parent_index_2 = random.randint(0, memory_length - 2)
 
@@ -194,7 +189,6 @@ class Worker():
 
                 fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
                 self.current_weights = new_weights
-                #print("new weights: ")
                 print('Weight Memory: ' + str(len(self.weight_memory)))
 
             self.current_check_count = 0
@@ -249,10 +243,9 @@ class BaseAgent(Agent):
 
     #assing aircraft properties in a blocked way
     def assign_blocked(self, radar_info, team_members):
-        print('blocked info')
+        #print('blocked info')
         decisions = []
         for i in range(3): 
-            #TODO get groups of workers
             for j in range(3): #assign 3 workers at a time 012, 345, 678 or 036, 147, 258
                 worker = team_members[i+(3*j)]
                 decisions.append(worker.decide(radar_info[i*3:i*3+3])) #get worker decision
@@ -281,7 +274,7 @@ class BaseAgent(Agent):
         return aircraft_type
 
 class Hierarchy(BaseAgent):
-    def __init__(self, unique_id, pos, model):
+    def __init__(self, unique_id, pos, model, info_type):
         '''
         grid: The MultiGrid object in which the agent lives.
         x: The agent's current x coordinate
@@ -289,10 +282,29 @@ class Hierarchy(BaseAgent):
        '''
         super().__init__(unique_id, model)
         self.breed = 'hierarchy'
+        self.pos = pos
+        self.team_count = 9 
+        self.team_members = []
+        self.correct_count = 0
+        self.wrong_count = 0
+        self.info_type = info_type
+        for i in range(self.team_count):
+            print('using models: ' + str(i + 4))
+            team_member = Worker("radar" + str(i + 4))
+            self.team_members.append(team_member)
 
     def step(self):
         print('h-stepping')
+
         radar_info = self.get_radar_info()
+        #print("radar info:" + str(radar_info))
+        decisions = []
+        if(self.info_type == 'distributed'):
+            decisions = self.assign_distributed(radar_info, self.team_members)
+        else:
+            decisions = self.assign_blocked(radar_info, self.team_members)
+
+        #TODO now the overarching manager needs to make the decision...different mental model?
 
 
 class Team(BaseAgent):
@@ -326,9 +338,9 @@ class Team(BaseAgent):
         
         #print("decisions: " + str(decisions))
         final_vote = ''
-        if decisions.count('Good') > 1:
+        if decisions.count('Good') > 4:
             final_vote = 'Friendly'
-        elif decisions.count('Bad') > 1:
+        elif decisions.count('Bad') > 4:
             final_vote = "Hostile"
         else:
             final_vote = "Neutral"

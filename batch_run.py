@@ -14,12 +14,12 @@ def get_df_name(df):
     return name
 
 # parameter lists for each parameter to be tested in batch run
-br_params = {"use_team": [False, False], "info_type":["distributed", "blocked"] }
+br_params = {"use_team": [False], "info_type":["distributed", "blocked"] }
 #they only get 30 tries for the task
 br = BatchRunner(RadarTask,
                  br_params,
                  iterations=1,
-                 max_steps=30,
+                 max_steps=300,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
 if __name__ == '__main__':
