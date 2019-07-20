@@ -3,10 +3,58 @@ import random
 from radartaskfcm.fcmwrapper import FCMUtils
 from radartaskfcm.neowrapper import NeoUtils
 
-# TODO worker can act as a team or subordinate or manager
-# TODO manager gets inputs from agents to make a decision
-# TODO add a learning method for updating weights
+# Represents the manager in a hierarchy
+class Manager():
 
+    def __init__(self, model_id):
+        self.model_id = model_id
+        self.neoService = NeoUtils()
+        self.fcmService = FCMUtils()
+        self.worker_opinions = [1,1,1,1,1,1,1,1,1]
+
+    def decide(self, workers):
+
+        #TODO this needs to change to reflect the FCM for the manager
+        #fcm_input1 = { 'name':'property1', 'act':'SIGMOID', 'output':worker_decisions[0], 'fixedOutput': False }
+        #fcm_input2 = { 'name':'property2', 'act':'SIGMOID', 'output':worker_decisions[1], 'fixedOutput': False }
+        #fcm_input3 = { 'name':'property3', 'act':'SIGMOID', 'output':worker_decisions[2], 'fixedOutput': False }
+        #body_input = [fcm_input1, fcm_input2, fcm_input3]
+        #concepts = { 'concepts':body_input }
+        #fcm_result = self.fcmService.getFCM(self.model_id, concepts)
+        print('deciding...')
+        #TODO - count the good, bad, and neutral votes, weight them by worker opinion
+        good_weight = 0
+        bad_weight = 0
+        neutral_weight = 0
+        for i in range(len(workers)):
+            print(i)
+            if(workers[i].last_decision == 'Good'):
+                good_weight += self.worker_opinions[1]
+            elif(workers[i].last_decision == 'Bad'):
+                bad_weight += self.worker_opinions[1]
+            elif(workers[i].last_decision == 'Neutral'):
+                neutral_weight += self.worker_opinions[1]
+
+        if(good_weight > bad_weight and good_weight > neutral_weight):
+            return 'Good'
+        if(bad_weight > good_weight and bad_weight > neutral_weight):
+            return 'Bad'
+        else:
+            return 'Neutral'
+        
+
+    def learn(self, is_correct, workers):
+        print('yay')
+        for i in range(len(workers)):
+            if workers[i].last_guess_correct:
+                self.worker_opinions[i] += 1
+            else:
+                self.worker_opinions[i] -= 1
+        print('How the manager feels...')
+        print(self.worker_opinions)
+    
+
+# Represents a subordinate worker
 class Worker():
 
     def __init__(self, model_id):
@@ -26,12 +74,12 @@ class Worker():
         self.last_decision = ''
         self.last_certainty = 0
         self.mutation_chance = 10
+        self.last_guess_correct = False
         #initialize weights
         fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
 
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
-    #TODO return a tuple with confidence
     def decide(self,radar_info):
         #the values are 1-3, so subtracting 2 gives us -1, 0, or 1
         radar_info[:] = [x - 2 for x in radar_info]
@@ -118,6 +166,7 @@ class Worker():
         #TODO maybe I need to have different lists for how many are right, doing more mutation at 
         # the lower levels and less to none at the higher
         #print('updating mental model with new weights for worker ' + str(self.model_id))
+        self.last_guess_correct = is_correct
         self.current_check_count += 1
         if(is_correct):
             self.current_correct_count += 1
@@ -292,6 +341,7 @@ class Hierarchy(BaseAgent):
             print('using models: ' + str(i + 4))
             team_member = Worker("radar" + str(i + 4))
             self.team_members.append(team_member)
+        self.manager = Manager("radarmanager") #TODO make sure to get the correct model
 
     def step(self):
         print('h-stepping')
@@ -304,7 +354,28 @@ class Hierarchy(BaseAgent):
         else:
             decisions = self.assign_blocked(radar_info, self.team_members)
 
-        #TODO now the overarching manager needs to make the decision...different mental model?
+        final_decision = self.manager.decide(self.team_members)
+        print('Manager Decision: ' + final_decision)
+
+        actual_aircraft_type = self.check_aircraft_type(radar_info)
+        print('Actual Aircraft: ' + actual_aircraft_type)
+
+        for i in range(self.team_count):
+            worker = self.team_members[i]
+            #each worker learns at thier own pace
+            if(worker.last_decision == actual_aircraft_type):
+                worker.learn(True)
+            else:
+                worker.learn(False)
+
+        is_correct = True
+        if(actual_aircraft_type == final_decision):
+            self.correct_count += 1
+        else:
+            self.wrong_count += 1
+            is_correct = False
+
+        self.manager.learn(is_correct, self.team_members)
 
 
 class Team(BaseAgent):
@@ -337,6 +408,18 @@ class Team(BaseAgent):
             decisions = self.assign_blocked(radar_info, self.team_members)
         
         #print("decisions: " + str(decisions))
+
+        good_certainty = 0.0
+        bad_certainty = 0.0
+        neutral_certainty = 0.0
+        for i in range(self.team_members):
+            if (self.team_members[i].last_decision == 'Good'):
+                good_certainty += self.team_members[i].last_certainty
+            elif (self.team_members[i].last_decision == 'Bad'):
+                bad_certainty += self.team_members[i].last_certainty
+            elif (self.team_members[i].last_decision == 'Neutral'):
+                neutral_certainty += self.team_members[i].last_certainty
+
         final_vote = ''
         if decisions.count('Good') > 4:
             final_vote = 'Friendly'
