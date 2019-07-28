@@ -31,14 +31,16 @@ class RadarTask(Model):
         y = 5
         
         #Uncomment the next 3 lines to run the team simulation, comment out the hierarchy stuff below
-        #team = Team(self.next_id(), (x, y), self, info_type)
-        #self.grid.place_agent(team, (x, y))
-        #self.schedule.add(team) 
+        if use_team:
+            team = Team(self.next_id(), (x, y), self, info_type)
+            self.grid.place_agent(team, (x, y))
+            self.schedule.add(team) 
 
+        else:
         #Uncomment the next 3 lines to run the hierarchy simulation, comment out the team stuff above
-        hierarchy = Hierarchy(self.next_id(), (x,y), self, info_type)
-        self.grid.place_agent(hierarchy, (x, y))
-        self.schedule.add(hierarchy) 
+            hierarchy = Hierarchy(self.next_id(), (x,y), self, info_type)
+            self.grid.place_agent(hierarchy, (x, y))
+            self.schedule.add(hierarchy) 
 
         self.datacollector = DataCollector(model_reporters={
                                             "Wrong": lambda m: self.count_bad_votes(m),
@@ -64,7 +66,6 @@ class RadarTask(Model):
         for agent in model.schedule.agents:
             total_count += agent.correct_count
 
-        #print("Good votes: " + str(total_count))
         return total_count
 
     @staticmethod
@@ -73,5 +74,4 @@ class RadarTask(Model):
         for agent in model.schedule.agents:
             total_count += agent.wrong_count
 
-        #print("bad votes: " + str(total_count))
         return total_count

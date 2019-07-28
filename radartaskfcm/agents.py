@@ -44,7 +44,6 @@ class Manager():
         
 
     def learn(self, is_correct, workers):
-        print('yay')
         for i in range(len(workers)):
             if workers[i].last_guess_correct:
                 self.worker_opinions[i] += 1
@@ -344,7 +343,6 @@ class Hierarchy(BaseAgent):
         self.manager = Manager("radarmanager") #TODO make sure to get the correct model
 
     def step(self):
-        print('h-stepping')
 
         radar_info = self.get_radar_info()
         #print("radar info:" + str(radar_info))
@@ -355,10 +353,10 @@ class Hierarchy(BaseAgent):
             decisions = self.assign_blocked(radar_info, self.team_members)
 
         final_decision = self.manager.decide(self.team_members)
-        print('Manager Decision: ' + final_decision)
+        #print('Manager Decision: ' + final_decision)
 
         actual_aircraft_type = self.check_aircraft_type(radar_info)
-        print('Actual Aircraft: ' + actual_aircraft_type)
+        #print('Actual Aircraft: ' + actual_aircraft_type)
 
         for i in range(self.team_count):
             worker = self.team_members[i]
@@ -412,7 +410,7 @@ class Team(BaseAgent):
         good_certainty = 0.0
         bad_certainty = 0.0
         neutral_certainty = 0.0
-        for i in range(self.team_members):
+        for i in range(len(self.team_members)):
             if (self.team_members[i].last_decision == 'Good'):
                 good_certainty += self.team_members[i].last_certainty
             elif (self.team_members[i].last_decision == 'Bad'):
