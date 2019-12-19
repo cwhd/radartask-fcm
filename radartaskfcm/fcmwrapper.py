@@ -42,7 +42,74 @@ class FCMUtils():
 
         return fcm_dict
 
+    def generateEvolvingCypher(self, model_id, new_weights):
+        #TODO each of these lines can be a different string in an array, add them together 
+        start_node = 0
+        end_node = 5
+        create_cypher = ("CREATE "
+            "(`0` :`Decide Good` {modelId:'" + model_id + "',goal:'good',description:'good'}) , "
+            "(`1` :Prop1 {modelId:'" + model_id + "',goal:'property1',description:'property1'}) , "
+            "(`2` :Prop2 {modelId:'" + model_id + "',goal:'property2',description:'property2'}) , "
+            "(`3` :Prop3 {modelId:'" + model_id + "',goal:'property3',description:'property3'}) , "
+            "(`4` :`Decide Bad` {modelId:'" + model_id + "',goal:'bad',description:'bad'}) , "
+            "(`5` :`Decide Neutral` {modelId:'" + model_id + "',goal:'neutral',description:'neutral'}) , ")
+
+        #python - can I have a string with parameters that I fill in later?
+        random_mutation_picker = random.randint(0, 2)
+        # 1 = add connection
+        # 2 = remove connection
+        # 3 = change weight
+        #print("current mutation = " + str(random_mutation_picker))
+        if random_mutation_picker == 0:
+            print("adding a connection")
+            # numbers should be random within the params of the model
+            # randomly generate the name
+            random_start_node = random.randint(start_node, end_node)
+            random_end_node = random.randint(start_node, end_node)
+            new_connection = "(`" + random_start_node + "`)-[:`affects` {value:'0.5'}]->(`" + random_end_node + "`), "
+            create_cypher += new_connection
+            create_cypher += getCypherConnections(self, model_id, new_weights)
+            print(create_cypher)
+            return create_cypher
+
+        elif random_mutation_picker == 1:
+            print("removing connection")
+        elif random_mutation_picker == 2:
+            print("updating a weight")
+
+
+        #combine successful models
+        # - take half of one, half of the other
+
+        #ASSUMPTIONS
+        #- We will always have 6 nodes
+        #- each node can have 0-5 outgoing connections
+        #- a node can connect to any other node
+        #- weights can be different 
+        #- we can have a variable number of mutations on change
+
+        return create_cypher
+
+    def getCypherConnections(self, model_id, new_weights):
+        return("(`1`)-[:`affects` {value:'-0.5'}]->(`0`), " #prop1->good
+            "(`2`)-[:`affects` {value:'-0.5'}]->(`0`), " #prop2->good
+            "(`3`)-[:`affects` {value:'-0.5'}]->(`0`), " #prop3->good
+            "(`3`)-[:`affects` {value:'" + str(new_weights[0]) + "'}]->(`2`), "
+            "(`3`)-[:`affects` {value:'" + str(new_weights[1]) + "'}]->(`1`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[2]) + "'}]->(`1`), "
+            "(`2`)-[:`affects` {value:'" + str(new_weights[3]) + "'}]->(`3`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[4]) + "'}]->(`2`), "
+            "(`1`)-[:`affects` {value:'" + str(new_weights[5]) + "'}]->(`3`), "
+            "(`3`)-[:`affects` {value:'0.5'}]->(`4`), " #prop3->bad
+            "(`2`)-[:`affects` {value:'0.5'}]->(`4`), " #prop2->bad
+            "(`1`)-[:`affects` {value:'0.5'}]->(`4`)," #prop1->bad
+            "(`2`)-[:`affects` {value:'0'}]->(`5`), " #prop2->neutral
+            "(`1`)-[:`affects` {value:'0.3'}]->(`5`), " #prop1->neutral
+            "(`3`)-[:`affects` {value:'-0.3'}]->(`5`)") #prop3->neutral  
+
     def generateCreateCypher(self, model_id, new_weights):
+        print("FOR TESTIN...")
+        generateEvolvingCypher(model_id, new_weights)
 
         '''
         cypher_create_old =  ("CREATE "
@@ -68,6 +135,8 @@ class FCMUtils():
             "(`1`)-[:`affects` {value:'" + str(new_weights[13]) + "'}]->(`5`), " #prop1->neutral
             "(`3`)-[:`affects` {value:'" + str(new_weights[14]) + "'}]->(`5`)") #prop3->neutral
         '''
+        #TODO maybe if I just have nodes that are connected to the outcomes, not each other...
+
         #only need 7 if we hard code decisions and find the neutral
         #neutral needs to be a formula...maybe just take one weight and do something to it
         neutral_weights = []
@@ -119,6 +188,24 @@ class FCMUtils():
         #print("delete results: " + str(results))
         #print("add cypher: " + add_cypher)
         #print("delete cypher: " + delete_cypher)
+
+    def replaceFCMWithCypher(self, model_id, add_cypher):
+        #delete...
+        delete_cypher = "MATCH (n {modelId:'" + model_id + "'}) where not exists (n.internalType) DETACH DELETE n "
+        headers = {'content-type': 'application/json'}
+        fcm_request = requests.post('http://localhost:8080/model', data=delete_cypher, headers=headers)
+        results = fcm_request.json()
+        #add...
+        headers = {'content-type': 'application/json'}
+        fcm_request = requests.post('http://localhost:8080/model', data=add_cypher, headers=headers)
+        results = fcm_request.json()
+        #print('REPLACEMENT RESULTS')
+        #print(results)
+        #print(results['errors'])
+        if len(results['errors']) > 0:
+            print('ERROR ADDING CYPHER')
+            print(add_cypher)
+
         
     def getNewWeights(self):
 
@@ -128,11 +215,3 @@ class FCMUtils():
             weights.append(random.randint(-100,100)/100)
 
         return weights
-
-"""
-TODO learning algorithm
-- check FCM guess value against actual value
-  - save the guessed answer and the actual answer for later
-  - if it's wrong, readjust weights, save back to NEO
-  - save number of iterations and value history
-"""

@@ -14,19 +14,24 @@ def get_df_name(df):
     return name
 
 # NOTE change these to update the model that gets run. The possible options are the in the comments.
-structure_type = "Hierarchy" #Hierarchy Team
+structure_type = "Team" #Hierarchy Team
 info_type = "distributed" #distributed blocked
 
 # these are the model params, tweak them to run different models
-br_params = {"use_team": [False], "info_type":[info_type] }
-#br_params = {"use_team": [True], "info_type":["info_type"] }
+#br_params = {"use_team": [False], "info_type":[info_type] }
+br_params = {"use_team": [True], "info_type":["info_type"] }
 
-
+'''
+30 iterations:
+correct: 17
+Wrong: 13
+percent correct: 0.5666666666666667
+'''
 #they only get 30 tries for the task
 br = BatchRunner(RadarTask,
                  br_params,
-                 iterations=100,
-                 max_steps=30,
+                 iterations=5,
+                 max_steps=1000,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
 if __name__ == '__main__':
@@ -52,4 +57,5 @@ if __name__ == '__main__':
     print('correct: ' + str(total_correct))
     print('Wrong: ' + str(total_wrong))
     print('percent correct: ' + str(percent_correct))
+    #TODO set the x and y axis names...
     plt.show()

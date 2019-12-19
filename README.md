@@ -2,8 +2,6 @@
 
 This model recreates the radar task that Carley and then Sun used to demonstrate cognitive architectures in Agent Based Modelling (ABM). Instead of the cognitive architecture used in the original papers, this model uses Fuzzy Cognitive Maps (FCM) as the Agent's cognitive architecture.
 
-This project is just getting started, stay tuned for updates.
-
 ## Components
 
 This uses [project mesa](https://github.com/projectmesa/mesa) and [jfcm](https://github.com/megadix/jfcm).
@@ -17,6 +15,14 @@ You need to have [project mesa](https://github.com/projectmesa/mesa) first, so g
 mesa runserver
 
 ```
+
+or to run as a batch:
+
+'''
+
+python batch_run.py
+
+'''
 
 ## Thoughts and TODOs
 
@@ -42,6 +48,14 @@ mesa runserver
   - https://paperswithcode.com/paper/unity-a-general-platform-for-intelligent#code
   - [Gym](https://gym.openai.com/envs/#toy_text)
 - Maybe I should go pure Python with [PyOpenFCM](https://github.com/cwhd/PyOpenFCM)
+
+
+## TODO for better evolution
+
+- Worker Class
+    - FCM service should work off of new structure (base, nodes, weights)
+    - the learn_with_mutate method needs to work with the history of new pieces
+
 
 ## References
 

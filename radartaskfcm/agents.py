@@ -2,6 +2,7 @@ from mesa import Agent
 import random
 from radartaskfcm.fcmwrapper import FCMUtils
 from radartaskfcm.neowrapper import NeoUtils
+from radartaskfcm.mutation import MutationUtils
 
 # Represents the manager in a hierarchy
 class Manager():
@@ -11,6 +12,7 @@ class Manager():
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
         self.worker_opinions = [1,1,1,1,1,1,1,1,1]
+        self.mutationService = MutationUtils()
 
     def decide(self, workers):
 
@@ -62,21 +64,29 @@ class Worker():
         self.fcm = '' # TODO this is the actual mental model
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
-        self.learning_threshold = .6
+        self.mutationService = MutationUtils()
+        self.learning_threshold = .8
         self.weight_memory = []
         self.bad_weight_memory = []
+        self.connection_memory = []
         self.current_correct_count = 0
         self.current_check_count = 0
         #self.number_of_weights = 15 # 7
         self.number_of_weights = 7
-        self.current_weights = [.5,.5,.5,.5,.5,.5,.3]
+        #self.current_weights = [.5,.5,.5,.5,.5,.5,.3]
         self.last_decision = ''
         self.last_certainty = 0
         self.mutation_chance = 10
         self.last_guess_correct = False
+        self.fcm_result = ''
         #initialize weights
-        fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
-
+        self.current_connections = self.mutationService.getInitialConnections()
+        self.current_weights = self.mutationService.getInitialWeights()
+        self.fcmnodes = self.mutationService.getBaseNodes(model_id)
+        
+        self.initialCypher = self.mutationService.putItTogether(self.current_connections, self.current_weights, self.fcmnodes)
+        #fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
+        fcm_result = self.fcmService.replaceFCMWithCypher(self.model_id, self.initialCypher)
 
     #given 3 inputs, decide if this is a friendly, hostile, or neutral aircraft
     def decide(self,radar_info):
@@ -89,7 +99,9 @@ class Worker():
         body_input = [fcm_input1, fcm_input2, fcm_input3]
         concepts = { 'concepts':body_input }
         fcm_result = self.fcmService.getFCM(self.model_id, concepts)
+        self.fcm_result = fcm_result
 
+        #print('GETTING MODELID:' + str(self.model_id))
         #print(fcm_result)
         #print('fcm_result: good:' + str(fcm_result['good']) + ' bad:' + str(fcm_result['bad']) + ' neutral:' + str(fcm_result['neutral']))
         good_guess = fcm_result['good']
@@ -130,36 +142,107 @@ class Worker():
 
         return weights
 
-    #TODO this can probably go away
-    def sweep_learn(self, is_correct):
-        #print('sweep learning')
-        sweep_threshold = .1
+    def learn_with_mutate(self, is_correct):
+        self.last_guess_correct = is_correct
         self.current_check_count += 1
         if(is_correct):
             self.current_correct_count += 1
 
         if(self.current_check_count > 4):
+            #this section kills off lower performing weights in memory
+            two_scorers = [t for t in self.weight_memory if t[0] == 2]
+            three_scorers = [t for t in self.weight_memory if t[0] == 3]
+            four_scorers = [t for t in self.weight_memory if t[0] == 4]
+            five_scorers = [t for t in self.weight_memory if t[0] == 5]
+
+            #increase learning threshold if we have good performers
+            if(len(four_scorers) > 5 or len(five_scorers) > 4):
+                self.learning_threshold = .8
+            elif(len(four_scorers) > 10 or len(five_scorers) > 8):
+                self.learning_threshold = .8
+
+            #if it's correct, add it to memory
             if(self.current_correct_count / self.current_check_count >= self.learning_threshold):
-                print('made the correct threshold')
-                print(self.current_weights)
-                print('----------------------------------------')
+                #print('CORRECT')
+                #print('--------------------------')
+                #just in case it already exists
+                print('Score Mix Before: Twos:' + str(len(two_scorers)) + ', Threes: ' + str(len(three_scorers)) + ', Fours: ' + str(len(four_scorers)) + ', Fives: ' + str(len(five_scorers)))
+                same_to_go = [t for t in self.weight_memory if t[1] == self.current_weights]
+                same_connection_memory = [t for t in self.connection_memory if t[1] == self.current_connections]
+
+                print('SAME TO GO')
+                print(same_to_go)
+                print(same_connection_memory)
+                #if(len(same_to_go) < 1 and len(same_connection_memory) < 1): 
+                    #self.weight_memory.remove((self.current_correct_count, self.current_weights))
+                #TODO I really should check to see if something already exists...though that would be unlikely 
+                self.weight_memory.append((self.current_correct_count, self.current_weights))
+                self.connection_memory.append((self.current_correct_count, self.current_connections))
+
             else:
-                print('failed the correct threshold, sweeping')
-                for i in range(len(self.current_weights)):
-                    if(self.current_weights[i] + sweep_threshold > 1):
-                        sweep_threshold = sweep_threshold * -1
-                    self.current_weights[i] = self.current_weights[i] + sweep_threshold
-                
-                fcm_result = self.fcmService.replaceFCM(self.model_id, self.current_weights)
-                #print("new weights: ")
-                #print(self.current_weights)
+                #print('NOT CORRECT')
+                memory_length = len(self.weight_memory)
+                if(memory_length > 20 and random.randint(0,100) > 50):
+                    print('SHUFFLING GENES')
+                    random_parent_index_1 = random.randint(0, memory_length - 1)
+                    random_parent_index_2 = random.randint(0, memory_length - 2)
+
+                    random_parent_weights_1 = self.weight_memory[random_parent_index_1]
+                    random_parent_connections_1 = self.connection_memory[random_parent_index_1]
+                    
+                    self.weight_memory.remove(random_parent_weights_1)
+                    self.connection_memory.remove(random_parent_connections_1)
+
+                    random_parent_weights_2 = self.weight_memory[random_parent_index_2]
+                    random_parent_connections_2 = self.connection_memory[random_parent_index_2]
+
+                    self.weight_memory.append(random_parent_weights_1)
+                    self.connection_memory.append(random_parent_connections_1)
+
+                    child_weights = []
+                    child_connections = []
+                    for i in range(len(random_parent_weights_1[1])):
+                        if(i % 2 == 0):
+                            child_weights.append(random_parent_weights_1[1][i])
+                            child_connections.append(random_parent_connections_1[1][i])
+                        else:
+                            if(len(random_parent_weights_2[1]) < i):
+                                child_weights.append(random_parent_weights_2[1][i])
+                                child_connections.append(random_parent_connections_2[1][i])
+
+                    new_weights = child_weights
+                    new_connections = child_connections
+
+                    self.current_weights = new_weights
+                    self.current_connections = new_connections
+
+                    self.initialCypher = self.mutationService.putItTogether(self.current_connections, self.current_weights, self.fcmnodes)
+                    #print('REPLACHING CYPHER')
+                    #print(self.initialCypher)
+                    fcm_result = self.fcmService.replaceFCMWithCypher(self.model_id, self.initialCypher)
+                else:
+                    print('NOT ENOUGH MEMORY, MUTATING')
+                    evolved = self.mutationService.evolveCypher(self.model_id, self.current_weights, self.current_connections)
+                    weights = evolved[1]
+                    connections = evolved[0]
+                    evolved_cypher = self.mutationService.putItTogether(connections, weights, self.fcmnodes)
+                    #print('EVOLVED CYPHER::')
+                    #print(evolved_cypher)    
+                    #fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
+                    self.current_weights = weights
+                    self.current_connections = connections
+
+                    self.initialCypher = self.mutationService.putItTogether(self.current_connections, self.current_weights, self.fcmnodes)
+                    #print('REPLACHING CYPHER')
+                    #print(self.initialCypher)
+                    fcm_result = self.fcmService.replaceFCMWithCypher(self.model_id, self.initialCypher)
+
+                    print('Weight Memory for ' + str(self.model_id) + ':' + str(len(self.weight_memory)))
 
             self.current_check_count = 0
-            self.current_correct_count = 0
+            self.current_correct_count = 0        
 
-        #TODO start all weights at -1
-        #TODO sweep up by .05, that is the granularity
-        #TODO 
+        return "learning"
 
     def learn(self, is_correct):
         #TODO maybe I need to have different lists for how many are right, doing more mutation at 
@@ -375,7 +458,6 @@ class Hierarchy(BaseAgent):
 
         self.manager.learn(is_correct, self.team_members)
 
-
 class Team(BaseAgent):
     def __init__(self, unique_id, pos, model, info_type):
         '''
@@ -439,6 +521,6 @@ class Team(BaseAgent):
             worker = self.team_members[i]
             #each worker learns at thier own pace
             if(worker.last_decision == actual_aircraft_type):
-                worker.learn(True)
+                worker.learn_with_mutate(True)
             else:
-                worker.learn(False)
+                worker.learn_with_mutate(False)
