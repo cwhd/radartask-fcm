@@ -201,14 +201,20 @@ class Worker():
 
                     child_weights = []
                     child_connections = []
-                    for i in range(len(random_parent_weights_1[1])):
+                    for i in range(len(random_parent_weights_1)):
+                        print('SHUFFLING...')
+                        print(random_parent_weights_1)
+                        print(random_parent_connections_2)
                         if(i % 2 == 0):
-                            child_weights.append(random_parent_weights_1[1][i])
-                            child_connections.append(random_parent_connections_1[1][i])
+                            child_weights.append(random_parent_weights_1[i])
+                            child_connections.append(random_parent_connections_1[i])
                         else:
-                            if(len(random_parent_weights_2[1]) < i):
-                                child_weights.append(random_parent_weights_2[1][i])
-                                child_connections.append(random_parent_connections_2[1][i])
+                            if(len(random_parent_weights_2) > i):
+                                child_weights.append(random_parent_weights_2[i])
+                                child_connections.append(random_parent_connections_2[i])
+                            else:
+                                child_weights.append(random_parent_weights_1[i])
+                                child_connections.append(random_parent_connections_1[i])
 
                     new_weights = child_weights
                     new_connections = child_connections

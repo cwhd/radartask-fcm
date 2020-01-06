@@ -30,8 +30,8 @@ percent correct: 0.5666666666666667
 #they only get 30 tries for the task
 br = BatchRunner(RadarTask,
                  br_params,
-                 iterations=5,
-                 max_steps=1000,
+                 iterations=1,
+                 max_steps=5000,
                  model_reporters={"Data Collector": lambda m: m.datacollector})
 
 if __name__ == '__main__':
@@ -54,8 +54,8 @@ if __name__ == '__main__':
     total_wrong = br_step_data['Wrong'][len(br_step_data) - 1]
     
     percent_correct = total_correct / (total_correct + total_wrong)
-    print('correct: ' + str(total_correct))
-    print('Wrong: ' + str(total_wrong))
+    print('Correct: ' + str(total_correct))
+    print('Incorrect: ' + str(total_wrong))
     print('percent correct: ' + str(percent_correct))
     #TODO set the x and y axis names...
     plt.show()
