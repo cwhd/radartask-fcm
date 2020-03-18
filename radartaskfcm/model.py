@@ -20,6 +20,8 @@ class RadarTask(Model):
     def __init__(self, height=grid_h, width=grid_w, use_team=False, info_type='distributed'):
         super().__init__()
 
+        print("Running model, info type=" + info_type + " and team=" + str(use_team))
+
         self.height = height
         self.width = width
         #have to initialize the grid
@@ -43,10 +45,14 @@ class RadarTask(Model):
             self.schedule.add(hierarchy) 
 
         self.datacollector = DataCollector(model_reporters={
-                                            "Wrong": lambda m: self.count_bad_votes(m),
-                                            "Correct": lambda m: self.count_good_votes(m)
+                                            "Incorrect": lambda m: self.count_bad_votes(m),
+                                            "Correct": lambda m: self.count_good_votes(m),
                                             }
                                         )
+                                            #"HostileIncorrect": lambda m: self.count_hostile_incorrect(m),
+                                            #"FriendlyIncorrect": lambda m: self.count_friendly_incorrect(m),
+                                            #"NeutralIncorrect": lambda m: self.count_neutral_incorrect(m),
+
 
     def step(self):
         # tell all the agents in the model to run their step function
@@ -73,5 +79,29 @@ class RadarTask(Model):
         total_count = 0
         for agent in model.schedule.agents:
             total_count += agent.wrong_count
+
+        return total_count
+
+    @staticmethod
+    def count_hostile_incorrect(model):
+        total_count = 0
+        for agent in model.schedule.agents:
+            total_count += agent.hostile_incorrect
+
+        return total_count
+
+    @staticmethod
+    def count_friendly_incorrect(model):
+        total_count = 0
+        for agent in model.schedule.agents:
+            total_count += agent.friendly_incorrect
+
+        return total_count
+
+    @staticmethod
+    def count_neutral_incorrect(model):
+        total_count = 0
+        for agent in model.schedule.agents:
+            total_count += agent.neutral_incorrect
 
         return total_count

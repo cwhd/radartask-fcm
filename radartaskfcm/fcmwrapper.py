@@ -33,7 +33,7 @@ class FCMUtils():
         post_body = json.dumps(starting_state_dict)
 
         headers = {'content-type': 'application/json'}
-        fcm_request = requests.post('http://localhost:8080/fcm/' + model_id + '/run?maxEpochs=1', data=post_body, headers=headers)
+        fcm_request = requests.post('http://localhost:8080/fcm/' + model_id + '/run?maxEpochs=10', data=post_body, headers=headers)
         results = fcm_request.json()
         results_dict = json.loads(fcm_request.text)
         fcm_dict = {}
@@ -69,24 +69,13 @@ class FCMUtils():
             new_connection = "(`" + random_start_node + "`)-[:`affects` {value:'0.5'}]->(`" + random_end_node + "`), "
             create_cypher += new_connection
             create_cypher += getCypherConnections(self, model_id, new_weights)
-            print(create_cypher)
+            #print(create_cypher)
             return create_cypher
 
         elif random_mutation_picker == 1:
             print("removing connection")
         elif random_mutation_picker == 2:
             print("updating a weight")
-
-
-        #combine successful models
-        # - take half of one, half of the other
-
-        #ASSUMPTIONS
-        #- We will always have 6 nodes
-        #- each node can have 0-5 outgoing connections
-        #- a node can connect to any other node
-        #- weights can be different 
-        #- we can have a variable number of mutations on change
 
         return create_cypher
 
@@ -108,7 +97,7 @@ class FCMUtils():
             "(`3`)-[:`affects` {value:'-0.3'}]->(`5`)") #prop3->neutral  
 
     def generateCreateCypher(self, model_id, new_weights):
-        print("FOR TESTIN...")
+        #print("FOR TESTIN...")
         generateEvolvingCypher(model_id, new_weights)
 
         '''

@@ -3,6 +3,7 @@ import random
 from radartaskfcm.fcmwrapper import FCMUtils
 from radartaskfcm.neowrapper import NeoUtils
 from radartaskfcm.mutation import MutationUtils
+#from radartaskfcm.deapeval import Deapeval
 
 # Represents the manager in a hierarchy
 class Manager():
@@ -13,6 +14,7 @@ class Manager():
         self.fcmService = FCMUtils()
         self.worker_opinions = [1,1,1,1,1,1,1,1,1]
         self.mutationService = MutationUtils()
+        #self.deapeval = Deapeval()
 
     def decide(self, workers):
 
@@ -23,13 +25,12 @@ class Manager():
         #body_input = [fcm_input1, fcm_input2, fcm_input3]
         #concepts = { 'concepts':body_input }
         #fcm_result = self.fcmService.getFCM(self.model_id, concepts)
-        print('deciding...')
-        #TODO - count the good, bad, and neutral votes, weight them by worker opinion
+        #print('deciding...')
         good_weight = 0
         bad_weight = 0
         neutral_weight = 0
         for i in range(len(workers)):
-            print(i)
+            #print(i)
             if(workers[i].last_decision == 'Good'):
                 good_weight += self.worker_opinions[1]
             elif(workers[i].last_decision == 'Bad'):
@@ -44,17 +45,15 @@ class Manager():
         else:
             return 'Neutral'
         
-
     def learn(self, is_correct, workers):
         for i in range(len(workers)):
             if workers[i].last_guess_correct:
                 self.worker_opinions[i] += 1
             else:
                 self.worker_opinions[i] -= 1
-        print('How the manager feels...')
-        print(self.worker_opinions)
+        #print('How the manager feels...')
+        #print(self.worker_opinions)
     
-
 # Represents a subordinate worker
 class Worker():
 
@@ -64,6 +63,7 @@ class Worker():
         self.fcm = '' # TODO this is the actual mental model
         self.neoService = NeoUtils()
         self.fcmService = FCMUtils()
+        #self.deapeval = Deapeval()
         self.mutationService = MutationUtils()
         self.learning_threshold = .8
         self.weight_memory = []
@@ -93,9 +93,20 @@ class Worker():
         #the values are 1-3, so subtracting 2 gives us -1, 0, or 1
         radar_info[:] = [x - 2 for x in radar_info]
 
-        fcm_input1 = { 'name':'property1', 'act':'SIGMOID', 'output':radar_info[0], 'fixedOutput': False }
-        fcm_input2 = { 'name':'property2', 'act':'SIGMOID', 'output':radar_info[1], 'fixedOutput': False }
-        fcm_input3 = { 'name':'property3', 'act':'SIGMOID', 'output':radar_info[2], 'fixedOutput': False }
+        '''
+        SIGNUM
+        TANH
+        SIGMOID
+        CAUCHY
+        NARY
+        LINEAR
+        INTERVAL
+        GAUSS
+        '''
+
+        fcm_input1 = { 'name':'property1', 'act':'LINEAR', 'output':radar_info[0], 'fixedOutput': False }
+        fcm_input2 = { 'name':'property2', 'act':'LINEAR', 'output':radar_info[1], 'fixedOutput': False }
+        fcm_input3 = { 'name':'property3', 'act':'LINEAR', 'output':radar_info[2], 'fixedOutput': False }
         body_input = [fcm_input1, fcm_input2, fcm_input3]
         concepts = { 'concepts':body_input }
         fcm_result = self.fcmService.getFCM(self.model_id, concepts)
@@ -108,33 +119,42 @@ class Worker():
         bad_guess = fcm_result['bad']
         neutral_guess = fcm_result['neutral']
 
-        #make decision & determine certainty
         if(neutral_guess == 1):
             self.last_decision = "Neutral"
-            if(neutral_guess ==  good_guess or neutral_guess == bad_guess):
-                self.last_certainty = 0.5
-            else:
-                self.last_certainty = 1
-        elif(good_guess > 0):
-            self.last_decision = "Good"
-            if(good_guess == neutral_guess or good_guess == bad_guess):
-                self.last_certainty = 0.5
-            else:
-                self.last_certainty = 1
-        elif(bad_guess > 0):
+            self.last_certainty = 1
+        if(bad_guess == 1):
             self.last_decision = "Bad"
-            if(bad_guess == neutral_guess or good_guess == bad_guess):
-                self.last_certainty = 0.5
-            else:
-                self.last_certainty = 1
-        else:
+            self.last_certainty = 1
+        if(good_guess == 1):
+            self.last_decision = "Good"
+            self.last_certainty = 1
+
+        '''
+        #make decision & determine certainty
+        if(neutral_guess > good_guess and neutral_guess > bad_guess):
+            self.last_decision = "Neutral"
+            self.last_certainty = 1
+        if(good_guess > neutral_guess and good_guess > bad_guess):
+            self.last_decision = "Good"
+            self.last_certainty = 1
+        if(bad_guess > good_guess and bad_guess > neutral_guess):
+            self.last_decision = "Bad"
+            self.last_certainty = 1
+
+        if(neutral_guess ==  good_guess or neutral_guess == bad_guess):
             self.last_decision = "Neutral"
             self.last_certainty = 0.3
+
+        if(good_guess == bad_guess):
+            self.last_decision = "Good"
+            self.last_certainty = 0.5
+        '''
 
         return self.last_decision
 
     #do some random mutation
     def _mutate_weights(self, weights, mutate_count):
+        #print("MUTATING...")
         new_weights = self.fcmService.getNewWeights()
         for i in range(mutate_count):
             random_property = random.randint(0,self.number_of_weights - 1)
@@ -142,7 +162,8 @@ class Worker():
 
         return weights
 
-    def learn_with_mutate(self, is_correct):
+    def learn_with_mutate(self, is_correct, flip_fh):
+ 
         self.last_guess_correct = is_correct
         self.current_check_count += 1
         if(is_correct):
@@ -170,9 +191,9 @@ class Worker():
                 same_to_go = [t for t in self.weight_memory if t[1] == self.current_weights]
                 same_connection_memory = [t for t in self.connection_memory if t[1] == self.current_connections]
 
-                print('SAME TO GO')
-                print(same_to_go)
-                print(same_connection_memory)
+                #print('SAME TO GO')
+                #print(same_to_go)
+                #print(same_connection_memory)
                 #if(len(same_to_go) < 1 and len(same_connection_memory) < 1): 
                     #self.weight_memory.remove((self.current_correct_count, self.current_weights))
                 #TODO I really should check to see if something already exists...though that would be unlikely 
@@ -202,9 +223,9 @@ class Worker():
                     child_weights = []
                     child_connections = []
                     for i in range(len(random_parent_weights_1)):
-                        print('SHUFFLING...')
-                        print(random_parent_weights_1)
-                        print(random_parent_connections_2)
+                        #print('SHUFFLING...')
+                        #print(random_parent_weights_1)
+                        #print(random_parent_connections_2)
                         if(i % 2 == 0):
                             child_weights.append(random_parent_weights_1[i])
                             child_connections.append(random_parent_connections_1[i])
@@ -227,23 +248,42 @@ class Worker():
                     #print(self.initialCypher)
                     fcm_result = self.fcmService.replaceFCMWithCypher(self.model_id, self.initialCypher)
                 else:
-                    print('NOT ENOUGH MEMORY, MUTATING')
+                    #print('NOT ENOUGH MEMORY, MUTATING')
+                    '''
+                    if(flip_fh): #random.randint(0,100) > 10 and 
+                        #print("FLIPPING")
+                        #print("BEFORE AND AFTER FLIP")
+                        #print(self.current_weights)
+                        try:
+                            self.current_weights[0] = -float(self.current_weights[0])
+                            self.current_weights[1] = -float(self.current_weights[1])
+                            self.current_weights[2] = -float(self.current_weights[2])
+
+                            self.current_weights[9] = -float(self.current_weights[9])
+                            self.current_weights[10] = -float(self.current_weights[10])
+                            self.current_weights[11] = -float(self.current_weights[11])
+                        except:
+                            print("FLIPPIN ERR: ")
+                        print(self.current_weights)
+                    else:
+                        '''
                     evolved = self.mutationService.evolveCypher(self.model_id, self.current_weights, self.current_connections)
-                    weights = evolved[1]
-                    connections = evolved[0]
-                    evolved_cypher = self.mutationService.putItTogether(connections, weights, self.fcmnodes)
+                    self.current_weightsweights = evolved[1]
+                    self.current_connections = evolved[0]
+                    
+                    evolved_cypher = self.mutationService.putItTogether(self.current_connections, self.current_weights, self.fcmnodes)
                     #print('EVOLVED CYPHER::')
                     #print(evolved_cypher)    
                     #fcm_result = self.fcmService.replaceFCM(self.model_id, new_weights)
-                    self.current_weights = weights
-                    self.current_connections = connections
+                    #self.current_weights = weights
+                    #self.current_connections = connections
 
                     self.initialCypher = self.mutationService.putItTogether(self.current_connections, self.current_weights, self.fcmnodes)
                     #print('REPLACHING CYPHER')
                     #print(self.initialCypher)
                     fcm_result = self.fcmService.replaceFCMWithCypher(self.model_id, self.initialCypher)
 
-                    print('Weight Memory for ' + str(self.model_id) + ':' + str(len(self.weight_memory)))
+                    #print('Weight Memory for ' + str(self.model_id) + ':' + str(len(self.weight_memory)))
 
             self.current_check_count = 0
             self.current_correct_count = 0        
@@ -363,7 +403,7 @@ class BaseAgent(Agent):
 
     #assign aircraft properties in a distributed way
     def assign_distributed(self, radar_info, team_members):
-        print('distributed info')
+        #print('distributed info')
         decisions = []
         for i in range(9):
             worker = team_members[i]
@@ -442,6 +482,14 @@ class Hierarchy(BaseAgent):
             decisions = self.assign_blocked(radar_info, self.team_members)
 
         final_decision = self.manager.decide(self.team_members)
+
+        if final_decision == "Good":
+            final_decision = "Friendly"
+        elif final_decision == "Bad":
+            final_decision = "Hostile"
+        else:
+            final_decision = "Neutral"          
+
         #print('Manager Decision: ' + final_decision)
 
         actual_aircraft_type = self.check_aircraft_type(radar_info)
@@ -449,12 +497,21 @@ class Hierarchy(BaseAgent):
 
         for i in range(self.team_count):
             worker = self.team_members[i]
-            #each worker learns at thier own pace
-            if(worker.last_decision == actual_aircraft_type):
-                worker.learn(True)
-            else:
-                worker.learn(False)
 
+            if worker.last_decision == "Good":
+                worker.last_decision = "Friendly"
+            elif worker.last_decision == "Bad":
+                worker.last_decision = "Hostile"
+            else:
+               worker.last_decision = "Neutral"          
+            #each worker learns at thier own pace
+            #if(worker.last_decision == actual_aircraft_type):
+            #    worker.learn(True)
+            #else:
+            #    worker.learn(False)
+
+
+        #print("TYPE AND DEC: " + actual_aircraft_type + ", " + final_decision)
         is_correct = True
         if(actual_aircraft_type == final_decision):
             self.correct_count += 1
@@ -478,6 +535,9 @@ class Team(BaseAgent):
         self.team_members = []
         self.correct_count = 0
         self.wrong_count = 0
+        self.hostile_incorrect = 0
+        self.friendly_incorrect = 0
+        self.neutral_incorrect = 0
         self.info_type = info_type
         for i in range(self.team_count):
             print('using models: ' + str(i + 4))
@@ -506,6 +566,9 @@ class Team(BaseAgent):
             elif (self.team_members[i].last_decision == 'Neutral'):
                 neutral_certainty += self.team_members[i].last_certainty
 
+        #print("----------------------")
+        #print("CERTAINTY: good: " + str(good_certainty) + " neutral: " + str(neutral_certainty) + " bad: " + str(bad_certainty))
+
         final_vote = ''
         if decisions.count('Good') > 4:
             final_vote = 'Friendly'
@@ -514,7 +577,25 @@ class Team(BaseAgent):
         else:
             final_vote = "Neutral"
 
+        certain_metric = decisions.count('Good') * good_certainty
+        neutral_metric = decisions.count('Neutral') * neutral_certainty
+        hostile_metric = decisions.count('Bad') * bad_certainty
+
+        #print("FINAL VOTE BEFORE: " + str(final_vote))
+        if(certain_metric > neutral_metric and certain_metric > hostile_metric):
+            final_vote = 'Friendly'
+        if(neutral_metric > certain_metric and neutral_metric > hostile_metric):
+            final_vote = 'Neutral'
+        if(hostile_metric > neutral_metric and hostile_metric > certain_metric):
+            final_vote = 'Hostile'
+
+        #print("FINAL VOTE AFTER: " + str(final_vote))
+        #print("METRICS: good: " + str(certain_metric) + " neutral: " + str(neutral_metric) + " bad: " + str(hostile_metric))
+
         actual_aircraft_type = self.check_aircraft_type(radar_info)
+
+        #print("ACTUAL VALUE: " + str(actual_aircraft_type))
+        #print("----------------------")
 
         is_correct = True
         if(actual_aircraft_type == final_vote):
@@ -522,11 +603,37 @@ class Team(BaseAgent):
         else:
             self.wrong_count += 1
             is_correct = False
+            #self.hostile_incorrect = 0
+            #self.friendly_incorrect = 0
+            #self.neutral_incorrect = 0
 
         for i in range(self.team_count):
             worker = self.team_members[i]
-            #each worker learns at thier own pace
-            if(worker.last_decision == actual_aircraft_type):
-                worker.learn_with_mutate(True)
+
+            if worker.last_decision == "Good":
+                worker.last_decision = "Friendly"
+            elif worker.last_decision == "Bad":
+                worker.last_decision = "Hostile"
             else:
-                worker.learn_with_mutate(False)
+               worker.last_decision = "Neutral"          
+
+            if(worker.last_decision != actual_aircraft_type):
+                if (worker.last_decision == "Hostile"):
+                    self.hostile_incorrect += 1
+                elif (worker.last_decision == "Friendly"):
+                    self.friendly_incorrect += 1
+                else:
+                    self.neutral_incorrect += 1
+
+            #print("--------------------------------")
+            #print("PARITY CHECK:" + worker.last_decision + " + " + actual_aircraft_type)  
+            #print("--------------------------------")
+
+            flip_fh = False
+            if (worker.last_decision == "Friendly" and actual_aircraft_type == "Hostile") or (worker.last_decision == "Hostile" and actual_aircraft_type == "Friendly"):
+                flip_fh = True
+            #each worker learns at thier own pace
+            #if(worker.last_decision == actual_aircraft_type):
+            #    worker.learn_with_mutate(True, flip_fh)
+            #else:
+            #    worker.learn_with_mutate(False, flip_fh)

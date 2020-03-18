@@ -26,9 +26,9 @@ class MutationUtils():
             random_end_node = random.randint(start_node, end_node)
             new_connection = "(`" + str(random_start_node) + "`)-[:`affects` {value:'0'}]->(`" + str(random_end_node) + "`)"
             ec_array.append(new_connection)
-            weights.append('0.5')
+            weights.append(0.5)
 
-        elif random_mutation_picker == 1 and len(ec_array) > 1:
+        elif random_mutation_picker == 1 and len(ec_array) > 6:
             #remove a connection and corresponding weight
             #print("-----------------------")
             #print("REMOVING CONNECTION")
@@ -43,29 +43,30 @@ class MutationUtils():
             index_to_mutate = random.randint(0,len(ec_array)-1)
             new_value = random.randint(-100,100)/100
             weights[index_to_mutate] = new_value
-            print(weights[index_to_mutate])
+            #print(weights[index_to_mutate])
 
         return (ec_array, weights)
 
     #1a) get an initial set of connections to start with
     def getInitialConnections(self):
-        ec_1 = "(`1`)-[:`affects` {value:'0'}]->(`0`)" 
-        ec_2 = "(`2`)-[:`affects` {value:'0'}]->(`0`)" 
-        ec_3 = "(`3`)-[:`affects` {value:'0'}]->(`0`)"
-        ec_4 = "(`3`)-[:`affects` {value:'0'}]->(`2`)"
-        ec_5 = "(`3`)-[:`affects` {value:'0'}]->(`1`)"
-        ec_6 = "(`2`)-[:`affects` {value:'0'}]->(`1`)"
-        ec_7 = "(`2`)-[:`affects` {value:'0'}]->(`3`)"
-        ec_8 = "(`1`)-[:`affects` {value:'0'}]->(`2`)"
-        ec_9 = "(`1`)-[:`affects` {value:'0'}]->(`3`)"
-        ec_10 = "(`3`)-[:`affects` {value:'0'}]->(`4`)" 
-        ec_11 = "(`2`)-[:`affects` {value:'0'}]->(`4`)" 
-        ec_12 = "(`1`)-[:`affects` {value:'0'}]->(`4`)" 
-        ec_13 = "(`2`)-[:`affects` {value:'0'}]->(`5`)" 
-        ec_14 = "(`1`)-[:`affects` {value:'0'}]->(`5`)" 
-        ec_15 = "(`3`)-[:`affects` {value:'0'}]->(`5`)"   
+        ec_1 = "(`1`)-[:`affects` {value:'0'}]->(`0`)" #-0.5 prop1 -> good
+        ec_2 = "(`2`)-[:`affects` {value:'0'}]->(`0`)" #-0.5  prop2 -> good
+        ec_3 = "(`3`)-[:`affects` {value:'0'}]->(`0`)" #-0.5 prop3 -> good
+        ec_4 = "(`3`)-[:`affects` {value:'0'}]->(`2`)" #0.5  
+        ec_5 = "(`3`)-[:`affects` {value:'0'}]->(`1`)" #0.5
+        ec_6 = "(`2`)-[:`affects` {value:'0'}]->(`1`)" #0.5 
+        ec_7 = "(`2`)-[:`affects` {value:'0'}]->(`3`)" #0.5 
+        ec_8 = "(`1`)-[:`affects` {value:'0'}]->(`2`)" #0.5
+        ec_9 = "(`1`)-[:`affects` {value:'0'}]->(`3`)" #0.5
+        ec_10 = "(`3`)-[:`affects` {value:'0'}]->(`4`)" #0.5 prop3 -> bad
+        ec_11 = "(`2`)-[:`affects` {value:'0'}]->(`4`)" #0.5 prop2 -> bad
+        ec_12 = "(`1`)-[:`affects` {value:'0'}]->(`4`)" #0.5 prop1 -> bad
+        ec_13 = "(`2`)-[:`affects` {value:'0'}]->(`5`)" #0 prop2 -> neutral
+        ec_14 = "(`1`)-[:`affects` {value:'0'}]->(`5`)" #0.3 prop1 -> neutral
+        ec_15 = "(`3`)-[:`affects` {value:'0'}]->(`5`)"   #-0.3 prop3 -> neutral
         ec_array = [ec_1, ec_2, ec_3, ec_4, ec_5, ec_6, ec_7, ec_8, ec_9, ec_10, ec_11, ec_12, ec_13, ec_14, ec_15]
         return ec_array
+        
 
     #1b)get the nodes for the FCM
     def getBaseNodes(self, model_id):
@@ -80,10 +81,11 @@ class MutationUtils():
 
     #1c) get initial weights for everyone
     def getInitialWeights(self):
-        return [-0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0.3, -0.3]
+        return [-0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.2, 0, -0.2]
 
     #3i)-internal add weights to the connections,
     def addWeights(self, connections, weights):
+        #print("LEN CONNECTIONS" + str(len(connections)) + "LEN WEIGHTS" + str(len(weights)))
         i = 0
         while i < len(connections):
             connections[i] = re.sub('value:\'\d*\.?\d+\'', 'value:\'' + str(weights[i]) + '\'', connections[i])
@@ -110,4 +112,4 @@ class MutationUtils():
             weights = evolved[1]
             connections = evolved[0]
             evolved_cypher = putItTogether(connections, weights, nodes)
-            print(evolved_cypher)    
+            #print(evolved_cypher)    
